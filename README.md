@@ -1,4 +1,4 @@
-# KARVANTANA — From Craft to Commerce
+# KARVANTANA - From Craft to Commerce
 
 **AI-Powered Digital Business Manager for Marginalized Artisans.**
 KARVANTANA turns a photo and a voice note in the artisan's own language into a professional,
