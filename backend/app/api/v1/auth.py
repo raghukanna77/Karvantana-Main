@@ -7,8 +7,9 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.errors import AuthenticationError
+from app.models.settings import UserSettings
 from app.schemas.auth import (
-    LoginIn, LogoutIn, OTPRequestIn, OTPVerifyIn, RefreshIn, RegisterIn, TokenPairOut,
+    LoginIn, LogoutIn, OTPRequestIn, OTPVerifyIn, RefreshIn, RegisterIn, TokenPairOut, UserSettingsIn,
 )
 from app.security.dependencies import get_current_user
 from app.security.rate_limit import enforce
@@ -57,3 +58,32 @@ def logout(payload: LogoutIn, db: Session = Depends(get_db)):
 @router.get("/me", summary="Current user profile")
 def me(user: User = Depends(get_current_user)):
     return auth_service.public_user(user)
+
+
+@router.patch("/me", summary="Update my profile (language, voice, accessibility, region)")
+def update_me(payload: UserSettingsIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # users.preferred_language stays the canonical mirror of the UI language.
+    if payload.preferred_language is not None:
+        user.preferred_language = payload.preferred_language
+    # Settings live in user_settings (one row per user, upserted).
+    row = db.query(UserSettings).filter(UserSettings.user_id == user.id).first()
+    if row is None:
+        row = UserSettings(user_id=user.id)
+        db.add(row)
+    for field in ("preferred_language", "preferred_voice_language", "voice_enabled",
+                  "easy_mode_enabled", "font_scale", "region", "district", "state"):
+        value = getattr(payload, field)
+        if value is not None:
+            setattr(row, field, value)
+    db.add(row)
+    db.commit()
+    out = auth_service.public_user(user)
+    out["settings"] = {
+        "preferred_language": row.preferred_language or user.preferred_language,
+        "preferred_voice_language": row.preferred_voice_language,
+        "voice_enabled": row.voice_enabled if row.voice_enabled is not None else True,
+        "easy_mode_enabled": bool(row.easy_mode_enabled),
+        "font_scale": row.font_scale or 1.0,
+        "region": row.region, "district": row.district, "state": row.state,
+    }
+    return out

@@ -27,6 +27,6 @@ export function homeFor(role: Role): string {
     case 'B2B_BUYER':
       return '/b2b'
     default:
-      return '/buyer'
+      return '/buyer/orders'
   }
 }

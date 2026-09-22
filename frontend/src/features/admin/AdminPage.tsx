@@ -6,6 +6,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../../core/api'
 import { inr } from '../../core/types'
 import { KBadge, KButton, KCard, KEmpty, KError, KSkeleton, KVStat } from '../../design'
+import { useT } from '../../i18n'
 
 interface Overview {
   artisans: number; active_products: number; orders: number
@@ -23,6 +24,7 @@ type Tab = 'overview' | 'moderation' | 'ai' | 'audit'
 
 export default function AdminPage() {
   const navigate = useNavigate()
+  const { t } = useT()
   const [tab, setTab] = useState<Tab>('overview')
   const [ov, setOv] = useState<Overview | null>(null)
   const [queue, setQueue] = useState<ModerationItem[] | null>(null)
@@ -44,17 +46,17 @@ export default function AdminPage() {
       <div className="k-stack">
         <div className="k-spread">
           <div>
-            <h2 style={{ fontSize: 22 }}>Platform console</h2>
-            <div className="muted small">Every figure is computed from real platform records.</div>
+            <h2 style={{ fontSize: 22 }}>{t('admin.title')}</h2>
+            <div className="muted small">{t('admin.real_numbers')}</div>
           </div>
           <KBadge tone="gold">Admin</KBadge>
         </div>
         {error && <KError message={error} />}
 
         <div className="k-row">
-          {(['overview', 'moderation', 'ai', 'audit'] as Tab[]).map((t) => (
-            <KButton key={t} size="sm" variant={tab === t ? 'primary' : 'ghost'} onClick={() => setTab(t)}>
-              {t === 'ai' ? 'AI governance' : t}
+          {(['overview', 'moderation', 'ai', 'audit'] as Tab[]).map((tb) => (
+            <KButton key={tb} size="sm" variant={tab === tb ? 'primary' : 'ghost'} onClick={() => setTab(tb)}>
+              {tb === 'overview' ? t('admin.overview') : tb === 'moderation' ? t('admin.moderation') : tb === 'ai' ? t('admin.ai_governance') : t('admin.audit')}
             </KButton>
           ))}
         </div>
@@ -73,7 +75,7 @@ export default function AdminPage() {
               <hr className="k-divider" />
               <div className="muted small">This month: {inr(ov.month_gmv)} GMV</div>
               <div className="k-row" style={{ marginTop: 12 }}>
-                <Link to="/explore" className="k-btn sm ghost">View marketplace</Link>
+                <Link to="/explore" className="k-btn sm ghost">{t('admin.view_marketplace')}</Link>
               </div>
             </KCard>
           )
@@ -81,7 +83,7 @@ export default function AdminPage() {
 
         {tab === 'moderation' && (
           queue === null ? <KSkeleton h={160} /> : queue.length === 0 ? (
-            <KEmpty icon="🛡️" title="Moderation queue is clear" hint="Products submitted for review will appear here." />
+            <KEmpty icon="🛡️" title={t('admin.queue_clear')} hint={t('admin.queue_hint')} />
           ) : (
             <div className="k-stack">
               {queue.map((p) => (
@@ -93,7 +95,7 @@ export default function AdminPage() {
                     </div>
                     <div className="k-row">
                       <KBadge tone={p.lifecycle === 'PUBLISHED' ? 'green' : 'gold'}>{p.lifecycle.replace(/_/g, ' ')}</KBadge>
-                      <Link to={`/product/${p.id}`} className="k-btn sm ghost">Inspect</Link>
+                      <Link to={`/product/${p.id}`} className="k-btn sm ghost">{t('admin.inspect')}</Link>
                     </div>
                   </div>
                 </KCard>
@@ -135,7 +137,7 @@ export default function AdminPage() {
 
         {tab === 'audit' && (
           audit === null ? <KSkeleton h={160} /> : audit.length === 0 ? (
-            <KEmpty icon="📜" title="No audit entries yet" hint="Important actions are recorded here automatically." />
+            <KEmpty icon="📜" title={t('admin.no_audit')} hint={t('admin.no_audit_hint')} />
           ) : (
             <div className="k-stack">
               {audit.map((a) => (

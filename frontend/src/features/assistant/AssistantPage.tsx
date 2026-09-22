@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../../core/api'
 import { KAIStages, KBadge, KButton, KCard, KError, KInput } from '../../design'
+import { useT } from '../../i18n'
 
 interface Exchange {
   q: string
@@ -13,14 +14,9 @@ interface Exchange {
   pending?: boolean
 }
 
-const SUGGESTIONS = [
-  'Which products are selling well?',
-  'Show me my pending orders',
-  'Which products need better photos?',
-  'What should I improve this week?',
-]
 
 export default function AssistantPage() {
+  const { t } = useT()
   const [exchanges, setExchanges] = useState<Exchange[]>([])
   const [question, setQuestion] = useState('')
   const [error, setError] = useState('')
@@ -37,7 +33,7 @@ export default function AssistantPage() {
       const res = await api.post<{ answer: string; data: unknown; sources: string[] }>('/ai/assistant/ask', { question: q })
       setExchanges((x) => x.map((e) => (e.q === q && e.pending ? { ...e, answer: res.answer, data: res.data, sources: res.sources, pending: false } : e)))
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'The assistant is unavailable right now.')
+      setError(e instanceof Error ? e.message : t('assistant.unavailable'))
       setExchanges((x) => x.filter((ex) => !(ex.q === q && ex.pending)))
     }
   }
@@ -46,8 +42,8 @@ export default function AssistantPage() {
     <div className="container" style={{ padding: '20px 16px 110px', maxWidth: 680 }}>
       <div className="k-stack">
         <div>
-          <h2 style={{ fontSize: 22 }}>Ask KARVANTANA</h2>
-          <div className="muted small">Your business assistant — every answer comes from your real shop data.</div>
+          <h2 style={{ fontSize: 22 }}>{t('ins.ask')}</h2>
+          <div className="muted small">{t('as.subtitle')}</div>
         </div>
 
         {exchanges.map((e, i) => (
@@ -69,7 +65,7 @@ export default function AssistantPage() {
                 <div style={{ fontSize: 14.5, whiteSpace: 'pre-wrap' }}>{e.answer}</div>
                 {e.sources && e.sources.length > 0 && (
                   <div className="muted small" style={{ marginTop: 8 }}>
-                    Sources: {e.sources.map((s) => <KBadge key={s} tone="violet">{s.replace('tool:', '')}</KBadge>)}
+                    {t('as.sources')}: {e.sources.map((s) => <KBadge key={s} tone="violet">{s.replace('tool:', '')}</KBadge>)}
                   </div>
                 )}
               </KCard>
@@ -81,9 +77,9 @@ export default function AssistantPage() {
 
         {exchanges.length === 0 && (
           <KCard className="k-weave">
-            <h3>What's on your mind?</h3>
+            <h3>{t('as.whats_on_mind')}</h3>
             <div className="k-stack" style={{ marginTop: 10, gap: 8 }}>
-              {SUGGESTIONS.map((s) => (
+              {[t('ins.q_selling'), t('ins.q_pending'), t('ins.q_improve'), t('ins.q_sales_month')].map((s) => (
                 <KButton key={s} variant="ghost" size="sm" onClick={() => void ask(s)}>{s}</KButton>
               ))}
             </div>
@@ -93,8 +89,8 @@ export default function AssistantPage() {
         <div className="k-row" style={{ position: 'sticky', bottom: 86 }}>
           <KInput style={{ flex: 1 }} value={question} onChange={(ev) => setQuestion(ev.target.value)}
                   onKeyDown={(ev) => { if (ev.key === 'Enter') void ask(question) }}
-                  placeholder="Ask about sales, orders, pricing…" aria-label="Ask the assistant" />
-          <KButton onClick={() => void ask(question)} disabled={!question.trim()}>Ask</KButton>
+                  placeholder={t('ins.placeholder')} aria-label={t('ins.ask')} />
+          <KButton onClick={() => void ask(question)} disabled={!question.trim()}>{t('ins.ask_btn')}</KButton>
         </div>
         <div ref={endRef} />
       </div>

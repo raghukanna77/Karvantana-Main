@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../../core/api'
 import { inr } from '../../core/types'
 import { KBadge, KButton, KCard, KEmpty, KError, KSkeleton, KVStat } from '../../design'
+import { useT } from '../../i18n'
 
 interface ClusterData {
   id: string
@@ -16,6 +17,7 @@ interface ClusterData {
 
 export default function ClusterPage() {
   const navigate = useNavigate()
+  const { t } = useT()
   const [cluster, setCluster] = useState<ClusterData | null>(null)
   const [error, setError] = useState('')
 
@@ -32,8 +34,8 @@ export default function ClusterPage() {
       <div className="k-stack">
         <div className="k-spread">
           <div>
-            <h2 style={{ fontSize: 22 }}>{cluster?.name ?? 'Cluster dashboard'}</h2>
-            <div className="muted small">{cluster?.region ?? 'Facilitator workspace'}</div>
+            <h2 style={{ fontSize: 22 }}>{cluster?.name ?? t('cluster.title')}</h2>
+            <div className="muted small">{cluster?.region ?? t('cluster.subtitle')}</div>
           </div>
           <KBadge tone="violet">Cluster manager</KBadge>
         </div>
@@ -41,9 +43,9 @@ export default function ClusterPage() {
 
         {!cluster && !error && <KSkeleton h={180} />}
         {error && !cluster && (
-          <KEmpty icon="🧩" title="No cluster assigned"
-                  hint="Ask an admin to create a cluster and assign you as its manager."
-                  action={<KButton variant="ghost" onClick={() => navigate('/')}>Back home</KButton>} />
+          <KEmpty icon="🧩" title={t('cluster.none_title')}
+                  hint={t('cluster.none_hint')}
+                  action={<KButton variant="ghost" onClick={() => navigate('/')}>{t('cluster.back_home')}</KButton>} />
         )}
 
         {cluster && (
@@ -66,10 +68,10 @@ export default function ClusterPage() {
               )}
             </KCard>
 
-            <h3 style={{ margin: 0 }}>Members ({cluster.artisans.length})</h3>
+            <h3 style={{ margin: 0 }}>{t('cluster.members')} ({cluster.artisans.length})</h3>
             {cluster.artisans.length === 0 && (
-              <KEmpty icon="🧑‍🤝‍🧑" title="No artisans in this cluster yet"
-                      hint="Onboard artisans from their profile once they complete sign-up." />
+              <KEmpty icon="🧑‍🤝‍🧑" title={t('cluster.no_artisans')}
+                      hint={t('cluster.no_artisans_hint')} />
             )}
             <div className="k-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))' }}>
               {cluster.artisans.map((a) => (

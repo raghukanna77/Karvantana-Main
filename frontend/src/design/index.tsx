@@ -1,5 +1,34 @@
 /** Design system components (KButton, KCard, KInput, badges, states). */
 import { type ReactNode } from 'react'
+import { LANGUAGES, persistLanguage, useT, type Lang } from '../i18n'
+
+/** Global language switcher — 10 languages, persists locally + server-side. */
+export function KLangSwitcher({ compact }: { compact?: boolean }) {
+  const { lang } = useT()
+  return (
+    <select
+      className="k-select"
+      style={{ width: 'auto', padding: '6px 10px', fontSize: 13 }}
+      aria-label="Language / భాష / भाषा"
+      value={lang}
+      onChange={(e) => {
+        const next = e.target.value as Lang
+        persistLanguage(next)
+        useUiSetLang(next)
+      }}
+    >
+      {LANGUAGES.map((l) => (
+        <option key={l.code} value={l.code}>{compact ? l.code.toUpperCase() : l.nativeName}</option>
+      ))}
+    </select>
+  )
+}
+
+// setLang lives in the stores module; imported lazily to avoid a cycle.
+import { useUi as useUiStore } from '../state/stores'
+function useUiSetLang(l: Lang) {
+  useUiStore.getState().setLang(l)
+}
 
 export function KButton({
   children, variant = 'primary', size, block, onClick, type = 'button', disabled, title, style,

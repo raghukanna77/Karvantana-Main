@@ -5,9 +5,12 @@ import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../../core/api'
 import { inr, type OrderView } from '../../core/types'
 import { KBadge, KButton, KCard, KEmpty, KError, KSkeleton } from '../../design'
+import { useStatusLabel, useT } from '../../i18n'
 import { useAuth } from '../../state/stores'
 
 export default function BuyerOrders() {
+  const { t } = useT()
+  const statusLabel = useStatusLabel()
   const [orders, setOrders] = useState<OrderView[] | null>(null)
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -18,8 +21,8 @@ export default function BuyerOrders() {
   const load = useCallback(() => {
     api.get<{ items: OrderView[] }>('/orders/mine')
       .then((r) => setOrders(r.items))
-      .catch((e) => setError(e instanceof Error ? e.message : 'Could not load orders.'))
-  }, [])
+      .catch((e) => setError(e instanceof Error ? e.message : t('orders.load_failed')))
+  }, [t])
 
   useEffect(() => { if (user) load() }, [user, load])
 
@@ -29,7 +32,7 @@ export default function BuyerOrders() {
       const next = await api.post<{ id: string; order_number: string }>(`/orders/${id}/reorder`)
       navigate(`/checkout/${next.id}`)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Reorder failed.')
+      setError(e instanceof Error ? e.message : t('orders.reorder_failed'))
       setBusyId(null)
     }
   }
@@ -45,10 +48,10 @@ export default function BuyerOrders() {
       const to = next[o.status]
       if (!to) return
       await api.post(`/orders/${o.id}/status`, { status: to })
-      setMsg({ id: o.id, text: `Order moved to ${to.split('_').join(' ').toLowerCase()}.` })
+      setMsg({ id: o.id, text: t('order.moved_to', { status: to.split('_').join(' ').toLowerCase() }, `Order moved to ${to.split('_').join(' ').toLowerCase()}.`) })
       load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not update the order.')
+      setError(e instanceof Error ? e.message : t('orders.update_failed'))
     } finally { setBusyId(null) }
   }
 
@@ -57,13 +60,13 @@ export default function BuyerOrders() {
   return (
     <div className="container" style={{ padding: '24px 20px 80px', maxWidth: 760 }}>
       <div className="k-stack">
-        <h2 style={{ fontSize: 22 }}>Your orders</h2>
+        <h2 style={{ fontSize: 22 }}>{t('orders.yours', undefined, 'Your orders')}</h2>
         {error && <KError message={error} />}
 
         {orders.length === 0 && (
-          <KEmpty icon="🧵" title="No orders yet"
-            hint="When you buy directly from an artisan, your orders and their journey appear here."
-            action={<Link to="/explore" className="k-btn">Explore products</Link>} />
+          <KEmpty icon="🧵" title={t('orders.none_yet', undefined, 'No orders yet')}
+            hint={t('orders.none_hint', undefined, 'When you buy directly from an artisan, your orders and their journey appear here.')}
+            action={<Link to="/explore" className="k-btn">{t('cta.explore_products')}</Link>} />
         )}
 
         {orders.length > 0 && msg && (
@@ -74,8 +77,11 @@ export default function BuyerOrders() {
           {orders.map((o) => {
             const done = o.status === 'DELIVERED' || o.status === 'COMPLETED'
             const nextStep: Record<string, string> = {
-              CONFIRMED: 'Begin processing', PROCESSING: 'Start production',
-              IN_PRODUCTION: 'Mark ready to ship', READY_TO_SHIP: 'Mark shipped', SHIPPED: 'Mark delivered',
+              CONFIRMED: t('order.next.begin', undefined, 'Begin processing'),
+              PROCESSING: t('order.next.produce', undefined, 'Start production'),
+              IN_PRODUCTION: t('order.next.ready', undefined, 'Mark ready to ship'),
+              READY_TO_SHIP: t('order.next.ship', undefined, 'Mark shipped'),
+              SHIPPED: t('order.next.deliver', undefined, 'Mark delivered'),
             }
             return (
               <KCard key={o.id}>
@@ -83,8 +89,8 @@ export default function BuyerOrders() {
                   <div>
                     <div className="k-row">
                       <strong>{o.order_number}</strong>
-                      <KBadge tone={done ? 'green' : o.status === 'CANCELLED' ? 'red' : 'blue'}>{o.status_label}</KBadge>
-                      {o.is_bulk && <KBadge tone="gold">bulk</KBadge>}
+                      <KBadge tone={done ? 'green' : o.status === 'CANCELLED' ? 'red' : 'blue'}>{statusLabel(o.status, o.status_label)}</KBadge>
+                      {o.is_bulk && <KBadge tone="gold">{t('badge.bulk', undefined, 'bulk')}</KBadge>}
                     </div>
                     <div className="muted small" style={{ marginTop: 4 }}>
                       {o.items.map((i) => `${i.title} × ${i.quantity}`).join(' · ')}
@@ -103,11 +109,11 @@ export default function BuyerOrders() {
                     </KButton>
                   )}
                   {(o.status === 'CONFIRMED' || o.status === 'PROCESSING') && (
-                    <KButton size="sm" variant="danger" onClick={() => void advanceCancel(o.id)} disabled={busyId === o.id}>Cancel</KButton>
+                    <KButton size="sm" variant="danger" onClick={() => void advanceCancel(o.id)} disabled={busyId === o.id}>{t('cta.cancel', undefined, 'Cancel')}</KButton>
                   )}
-                  <Link to={`/orders/${o.id}`} className="k-btn sm ghost">Details</Link>
+                  <Link to={`/orders/${o.id}`} className="k-btn sm ghost">{t('order.details', undefined, 'Details')}</Link>
                   {done && (
-                    <KButton size="sm" variant="gold" onClick={() => void reorder(o.id)} disabled={busyId === o.id}>🔁 Buy again</KButton>
+                    <KButton size="sm" variant="gold" onClick={() => void reorder(o.id)} disabled={busyId === o.id}>🔁 {t('cta.buy_again')}</KButton>
                   )}
                 </div>
               </KCard>
@@ -122,10 +128,10 @@ export default function BuyerOrders() {
     setBusyId(id); setMsg(null); setError('')
     try {
       await api.post(`/orders/${id}/status`, { status: 'CANCELLED' })
-      setMsg({ id, text: 'Order cancelled.' })
+      setMsg({ id, text: t('order.cancelled_msg', undefined, 'Order cancelled.') })
       load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not cancel the order.')
+      setError(e instanceof Error ? e.message : t('orders.cancel_failed'))
     } finally { setBusyId(null) }
   }
 }

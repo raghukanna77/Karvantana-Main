@@ -1,0 +1,8 @@
+{
+  "appId": "com.karvantana.app",
+  "appName": "KARVANTANA",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}

@@ -5,8 +5,10 @@ import { Link } from 'react-router-dom'
 import { api } from '../../core/api'
 import type { ArtisanInfo } from '../../core/types'
 import { KBadge, KButton, KCard, KEmpty, KError, KSkeleton } from '../../design'
+import { useT } from '../../i18n'
 
 export default function SavedArtisansPage() {
+  const { t } = useT()
   const [items, setItems] = useState<ArtisanInfo[] | null>(null)
   const [error, setError] = useState('')
 
@@ -30,13 +32,13 @@ export default function SavedArtisansPage() {
   return (
     <div className="container" style={{ padding: '24px 20px 80px', maxWidth: 760 }}>
       <div className="k-stack">
-        <h2 style={{ fontSize: 22 }}>Saved artisans</h2>
+        <h2 style={{ fontSize: 22 }}>{t('nav.saved')}</h2>
         {error && <KError message={error} />}
 
         {items.length === 0 && (
-          <KEmpty icon="🤝" title="No saved artisans yet"
-            hint="After a purchase — or right from a product page — save the makers you love and come back any time."
-            action={<Link to="/explore" className="k-btn">Find makers to follow</Link>} />
+          <KEmpty icon="🤝" title={t('saved.none_title')}
+            hint={t('saved.none_hint')}
+            action={<Link to="/explore" className="k-btn">{t('saved.find_makers')}</Link>} />
         )}
 
         <div className="k-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
@@ -56,8 +58,8 @@ export default function SavedArtisansPage() {
                 {a.stats.rating != null && <span className="muted small">{a.stats.rating}★ · {a.stats.verified_orders} orders</span>}
               </div>
               <div className="k-row" style={{ marginTop: 12 }}>
-                <Link to={`/artisan-u/${a.id}`} className="k-btn sm">Visit studio</Link>
-                <KButton size="sm" variant="ghost" onClick={() => void unfollow(a.id)}>Remove</KButton>
+                <Link to={`/artisan-u/${a.id}`} className="k-btn sm">{t('saved.visit_studio')}</Link>
+                <KButton size="sm" variant="ghost" onClick={() => void unfollow(a.id)}>{t('saved.remove')}</KButton>
               </div>
             </KCard>
           ))}

@@ -40,3 +40,7 @@ class SoftDeleteMixin:
     @property
     def is_deleted(self) -> bool:
         return self.deleted_at is not None
+
+
+import app.models.sih  # noqa: E402,F401  SIH evidence models register with Base (must come after mixins)
+import app.models.settings  # noqa: E402,F401  user accessibility/voice/language preferences

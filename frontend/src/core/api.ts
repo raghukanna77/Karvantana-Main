@@ -13,7 +13,32 @@ export class ApiError extends Error {
   }
 }
 
+/** API origin — works everywhere without rebuilds:
+ *  • Web (vite proxy): set nothing — relative `/api/v1` goes through the dev server.
+ *  • Android/Capacitor (https://localhost in a WebView): set `localStorage.karvantana.server`,
+ *    e.g. http://192.168.1.20:8014 — the in-app Server Settings screen on Login.
+ *  • Optional build default: VITE_API_ORIGIN in `.env` (picked up at build time).
+ *  Same for `/media` product photos, so images load in the WebView too. */
+export function apiOrigin(): string {
+  try {
+    return localStorage.getItem('karvantana.server') || import.meta.env.VITE_API_ORIGIN || ''
+  } catch {
+    return import.meta.env.VITE_API_ORIGIN || ''
+  }
+}
+
+/** Prefix a backend-served path (e.g. /media/xxx.webp) with the server origin. */
+export function serverUrl(path: string): string {
+  if (/^https?:\/\//i.test(path)) return path
+  return `${apiOrigin()}${path}`
+}
+
 const BASE = '/api/v1'
+
+/** Full URL for an API path, honoring the runtime-configurable server origin. */
+function fullUrl(path: string): string {
+  return `${apiOrigin()}${BASE}${path}`
+}
 
 let accessToken: string | null = null
 
@@ -31,7 +56,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (init.body && !(init.body instanceof Blob) && !(init.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json'
   }
-  const res = await fetch(`${BASE}${path}`, { ...init, headers: { ...headers, ...(init.headers as Record<string, string>) } })
+  const res = await fetch(fullUrl(path), { ...init, headers: { ...headers, ...(init.headers as Record<string, string>) } })
   let body: unknown = null
   try {
     body = await res.json()

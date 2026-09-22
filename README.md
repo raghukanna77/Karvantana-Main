@@ -28,6 +28,32 @@ cd backend && python3 -m pytest tests/ -q   # 21 unit + integration tests
 cd frontend && npx tsc --noEmit && npm run build
 ```
 
+---
+
+## Android app (Android Studio / Capacitor)
+
+The Android app is a native shell around the same web build (Capacitor 6).
+
+**One-time setup**
+```bash
+cd frontend
+npm install                  # installs @capacitor/*
+npm run android:sync         # builds web + copies into android/
+npm run android:open         # opens the project in Android Studio
+```
+Then in Android Studio: **Build → Build Bundle(s)/APK(s) → Build APK(s)**
+(or run on a device/emulator with the green ▶ button).
+
+**Pointing the phone at your backend**
+The app talks to the KARVANTANA server over your network:
+1. Find your computer's LAN IP (`ipconfig` / `ifconfig`), e.g. `192.168.1.20`.
+2. Run the backend with `python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8014`.
+3. On the app's Login screen, set **Server address** to `http://192.168.1.20:8014` and Save.
+   (The address is stored on the device; production deployments serve HTTPS and don't need it.)
+
+> The web build inside `android/app/src/main/assets/public` is refreshed by
+> `npm run android:sync` after any frontend change.
+
 ### Demo credentials (seeded, fictional)
 
 | Role | Login | Password |

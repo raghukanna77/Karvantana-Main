@@ -45,6 +45,52 @@ def artisan_orders(user: User = Depends(get_current_user), db: Session = Depends
     return {"items": [_order_json(o) for o in order_service.artisan_orders(db, profile.id)]}
 
 
+@router.get("/artisan/customers", summary="My customers (artisan) — grouped from real orders")
+def artisan_customers(user: User = Depends(require_roles("ARTISAN", "ADMIN")),
+                      db: Session = Depends(get_db)):
+    """Repeat-commerce view: every buyer who ordered from this artisan, with real
+    order counts, last-order dates and spend (sum of this artisan's items only).
+    No fabricated metrics — an empty studio returns an empty list."""
+    from sqlalchemy import func
+
+    from app.models.commerce import Order, OrderItem
+    from app.models.profile import ArtisanProfile
+    from app.models.user import User
+
+    profile = db.query(ArtisanProfile).filter(ArtisanProfile.user_id == user.id).first()
+    if profile is None:
+        return {"items": []}
+    rows = (
+        db.query(
+            Order.buyer_id,
+            func.count(func.distinct(Order.id)).label("orders"),
+            func.max(Order.created_at).label("last_at"),
+            func.sum(OrderItem.line_total).label("spent"),
+        )
+        .join(OrderItem, OrderItem.order_id == Order.id)
+        .filter(OrderItem.artisan_id == profile.id)
+        .filter(Order.status != "DRAFT")
+        .group_by(Order.buyer_id)
+        .all()
+    )
+    users: dict[str, User] = {}
+    if rows:
+        found = db.query(User).filter(User.id.in_([r.buyer_id for r in rows])).all()
+        users = {u.id: u for u in found}
+    items = []
+    for r in sorted(rows, key=lambda r: r.last_at, reverse=True):
+        u = users.get(r.buyer_id)
+        items.append({
+            "buyer_id": r.buyer_id,
+            "name": u.full_name if u else "Customer",
+            "orders": int(r.orders),
+            "repeat": int(r.orders) > 1,
+            "last_order_at": r.last_at.isoformat() if r.last_at else None,
+            "total_spent": float(r.spent or 0),
+        })
+    return {"items": items}
+
+
 @router.get("/{order_id}", summary="Order detail (buyer, artisan or admin)")
 def get_order(order_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     order = order_service.get_order_for(db, order_id, user)

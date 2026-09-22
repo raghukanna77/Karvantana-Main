@@ -2,9 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api } from '../../core/api'
+import { api, serverUrl } from '../../core/api'
 import { inr, type ProductSummary } from '../../core/types'
 import { KBadge, KButton, KCard, KEmpty, KInput } from '../../design'
+import { useT } from '../../i18n'
+import { useUi } from '../../state/stores'
+import { listen, sttSupported, speak, type ListenHandle } from '../../voice/voice'
+import { useRef } from 'react'
 
 interface Feed {
   items: ProductSummary[]
@@ -13,9 +17,29 @@ interface Feed {
 }
 
 export default function ExplorePage() {
+  const { t } = useT()
+  const lang = useUi((s) => s.lang)
   const [q, setQ] = useState('')
   const [feed, setFeed] = useState<Feed | null>(null)
   const [loading, setLoading] = useState(true)
+  const [voiceListening, setVoiceListening] = useState(false)
+  const micHandle = useRef<ListenHandle | null>(null)
+
+  const startVoiceSearch = () => {
+    if (!sttSupported()) return
+    const h = listen({
+      lang,
+      onFinal: (txt) => {
+        setQ(txt)
+        setVoiceListening(false)
+        speak(t('search.understood_as'), lang)
+        void search(txt)
+      },
+      onError: () => setVoiceListening(false),
+      onEnd: () => setVoiceListening(false),
+    })
+    if (h) micHandle.current = h
+  }
 
   async function search(query = q) {
     setLoading(true)
@@ -31,8 +55,8 @@ export default function ExplorePage() {
   return (
     <div className="k-stack" style={{ paddingBottom: 40 }}>
       <div>
-        <h1 style={{ fontSize: 24 }}>Explore handmade</h1>
-        <div className="muted small">Every product belongs to a real artisan — tap through to meet them.</div>
+        <h1 style={{ fontSize: 24 }}>{t('explore.title')}</h1>
+        <div className="muted small">{t('explore.subtitle')}</div>
       </div>
 
       <div className="k-row">
@@ -40,13 +64,24 @@ export default function ExplorePage() {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') void search() }}
-                placeholder='Try: "handwoven saree under 1500" or "100 bamboo baskets for a corporate event"' />
-        <KButton onClick={() => void search()}>Search</KButton>
+                placeholder={t('search.placeholder')} />
+        <KButton onClick={() => void search()}>{t('search.button')}</KButton>
+        {sttSupported() && (
+          <button
+            className={`k-mic-btn ${voiceListening ? 'listening' : ''}`}
+            style={{ width: 52, height: 52 }}
+            onClick={startVoiceSearch}
+            aria-label={t('explore.voice_search')}
+          >
+            <span className="k-mic-icon" style={{ fontSize: 22 }} aria-hidden>🎤</span>
+          </button>
+        )}
       </div>
+      {voiceListening && <div className="muted small" aria-live="polite">🎙️ {t('home.listening')}</div>}
 
       {feed?.interpreted && (
         <div className="k-row">
-          <span className="muted small">Understood as:</span>
+          <span className="muted small">{t('search.understood_as')}</span>
           {Object.entries(feed.interpreted).map(([k, v]) => (
             <KBadge key={k} tone="blue">{k.replace('_', ' ')}: {String(v)}</KBadge>
           ))}
@@ -56,8 +91,8 @@ export default function ExplorePage() {
       {loading && <div className="k-grid">{[1, 2, 3, 4].map((i) => <KCard key={i}><div className="k-skeleton" style={{ height: 220 }} /></KCard>)}</div>}
 
       {feed && feed.items.length === 0 && !loading && (
-        <KCard><KEmpty icon="🔍" title="Nothing matched that search"
-                       hint="Try a material (bamboo, cotton), a craft (handloom), or a state." /></KCard>
+        <KCard><KEmpty icon="🔍" title={t('search.no_results')}
+                       hint={t('search.no_results_hint')} /></KCard>
       )}
 
       {feed && feed.items.length > 0 && (
@@ -65,7 +100,7 @@ export default function ExplorePage() {
           {feed.items.map((p) => (
             <Link key={p.id} to={`/product/${p.id}`}>
               <KCard className="k-product-card">
-                {p.image_url ? <img className="ph" src={p.image_url} alt={p.title} loading="lazy" /> : <div className="ph" />}
+                {p.image_url ? <img className="ph" src={serverUrl(p.image_url)} alt={p.title} loading="lazy" /> : <div className="ph" />}
                 <div className="body">
                   <strong style={{ fontSize: 14.5 }}>{p.title}</strong>
                   <span className="muted small">{p.material}{p.technique ? ` · ${p.technique}` : ''}</span>

@@ -1,29 +1,37 @@
-/** Public landing page — From Craft to Commerce. */
+/** Public landing page — From Craft to Commerce. Fully i18n. */
 
 import { Link } from 'react-router-dom'
 import { KButton, KCard } from '../../design'
-
-const STEPS = [
-  ['📷', 'Capture', 'Snap a photo and speak about your craft in your own language.'],
-  ['✨', 'AI builds your catalogue', 'Voice becomes a professional, multilingual product listing — you approve every word.'],
-  ['💰', 'Price with confidence', 'See your costs, the market range and a suggested price you can accept, edit or skip.'],
-  ['🌐', 'Meet the right buyers', 'Consumers, boutiques, hotels and institutions find you — including bulk orders.'],
-  ['🔁', 'Sell again & again', 'Buyers follow you, reorder directly, and your reputation grows with every order.'],
-] as const
+import { useT } from '../../i18n'
 
 export default function LandingPage() {
+  const { t } = useT()
+
+  const STEPS = [
+    ['📷', t('landing.step1_t'), t('landing.step1_b')],
+    ['✨', t('landing.step2_t'), t('landing.step2_b')],
+    ['💰', t('landing.step3_t'), t('landing.step3_b')],
+    ['🌐', t('landing.step4_t'), t('landing.step4_b')],
+    ['🔁', t('landing.step5_t'), t('landing.step5_b')],
+  ] as const
+
   return (
     <div>
-      <section className="container k-weave" style={{ padding: '72px 20px 56px', textAlign: 'center' }}>
-        <div className="k-badge violet" style={{ marginBottom: 18 }}>AI-Powered Digital Business Manager for Artisans</div>
-        <h1 className="hero-title">From <span className="grad">Craft</span><br />to <span className="grad">Commerce</span></h1>
+      <section className="container k-hero">
+        <div className="k-badge violet" style={{ marginBottom: 18 }}>{t('landing.badge')}</div>
+        <h1 className="hero-title">
+          {t('word.craft') !== 'Craft' ? (
+            <span className="grad">{t('hero.line1')}<br />{t('hero.line2')}</span>
+          ) : (
+            <>From <span className="grad">Craft</span><br />to <span className="grad">Commerce</span></>
+          )}
+        </h1>
         <p className="muted" style={{ maxWidth: 640, margin: '18px auto 28px', fontSize: 17 }}>
-          Give KARVANTANA a photo and describe your product in your own language. Our AI helps turn it into a
-          professional digital business — catalogue, pricing, buyers and repeat orders.
+          {t('landing.sub')}
         </p>
         <div className="k-row" style={{ justifyContent: 'center' }}>
-          <Link to="/login"><KButton size="lg">Start Your Digital Business</KButton></Link>
-          <Link to="/explore"><KButton size="lg" variant="ghost">Explore Artisan Products</KButton></Link>
+          <Link to="/welcome"><KButton size="lg">{t('landing.cta_start')}</KButton></Link>
+          <Link to="/explore"><KButton size="lg" variant="ghost">{t('landing.cta_explore')}</KButton></Link>
         </div>
       </section>
 
@@ -31,24 +39,24 @@ export default function LandingPage() {
         <div className="k-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))' }}>
           <KCard>
             <div style={{ fontSize: 30 }}>🧵</div>
-            <h3 style={{ margin: '8px 0 6px' }}>The problem</h3>
-            <p className="muted small">Artisans already make extraordinary products. What's missing is the digital machinery: catalogues, pricing, buyers, trust, repeat customers.</p>
+            <h3 style={{ margin: '8px 0 6px' }}>{t('landing.problem_t')}</h3>
+            <p className="muted small">{t('landing.problem_b')}</p>
           </KCard>
           <KCard>
             <div style={{ fontSize: 30 }}>🤝</div>
-            <h3 style={{ margin: '8px 0 6px' }}>Not another marketplace</h3>
-            <p className="muted small">Marketplaces connect buyers to products. KARVANTANA connects buyers back to the artisan — and makes artisans digitally commerce-ready.</p>
+            <h3 style={{ margin: '8px 0 6px' }}>{t('landing.notmarketplace_t')}</h3>
+            <p className="muted small">{t('landing.notmarketplace_b')}</p>
           </KCard>
           <KCard>
             <div style={{ fontSize: 30 }}>📈</div>
-            <h3 style={{ margin: '8px 0 6px' }}>A business, not a listing</h3>
-            <p className="muted small">Smart pricing, demand insights, B2B bulk requests, reputation and direct reorders — the full loop from craft to sustainable income.</p>
-          </KCard>
-        </div>
-      </section>
+            <h3 style={{ margin: '8px 0 6px' }}>{t('landing.business_t')}</h3>
+            <p className="muted small">{t('landing.business_b')}</p>
+        </KCard>
+      </div>
+    </section>
 
       <section className="container" style={{ padding: '40px 20px' }}>
-        <h2 className="section-title">How it works</h2>
+        <h2 className="section-title">{t('landing.how')}</h2>
         <div className="k-stack">
           {STEPS.map(([icon, title, body], i) => (
             <div key={title} className="k-row" style={{ alignItems: 'flex-start' }}>
@@ -65,36 +73,33 @@ export default function LandingPage() {
       <section className="container" style={{ padding: '20px 20px 40px' }}>
         <div className="k-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
           <KCard className="pad-lg">
-            <div className="k-badge blue">For Artisans & SHGs</div>
-            <h3 style={{ margin: '12px 0 8px' }}>Your craft deserves more than a one-day fair.</h3>
+            <div className="k-badge blue">{t('landing.for_artisans')}</div>
+            <h3 style={{ margin: '12px 0 8px' }}>{t('landing.artisan_headline')}</h3>
             <ul className="muted small" style={{ lineHeight: 2, paddingLeft: 18 }}>
-              <li>🎙️ Speak your product — AI writes the listing</li>
-              <li>💰 Smart pricing with "Why this price?"</li>
-              <li>📦 Bulk & custom requests from verified buyers</li>
-              <li>📊 Real insights from your real orders</li>
+              <li>{t('landing.art_li1')}</li>
+              <li>{t('landing.art_li2')}</li>
+              <li>{t('landing.art_li3')}</li>
+              <li>{t('landing.art_li4')}</li>
             </ul>
-            <Link to="/login"><KButton block style={{ marginTop: 14 }}>Start Selling</KButton></Link>
+            <Link to="/login"><KButton block style={{ marginTop: 14 }}>{t('cta.start_selling')}</KButton></Link>
           </KCard>
           <KCard className="pad-lg">
-            <div className="k-badge gold">For Buyers, B2B & Institutions</div>
-            <h3 style={{ margin: '12px 0 8px' }}>Source handmade directly from the makers.</h3>
+            <div className="k-badge gold">{t('landing.for_buyers')}</div>
+            <h3 style={{ margin: '12px 0 8px' }}>{t('landing.buyer_headline')}</h3>
             <ul className="muted small" style={{ lineHeight: 2, paddingLeft: 18 }}>
-              <li>🔎 Describe what you need in plain language</li>
-              <li>🧑‍🏭 Know the artisan behind every product</li>
-              <li>🧾 Quotes, purchase orders, repeat procurement</li>
-              <li>✅ Verified-purchase reviews only</li>
+              <li>{t('landing.buy_li1')}</li>
+              <li>{t('landing.buy_li2')}</li>
+              <li>{t('landing.buy_li3')}</li>
+              <li>{t('landing.buy_li4')}</li>
             </ul>
-            <Link to="/explore"><KButton block variant="gold" style={{ marginTop: 14 }}>Explore Products</KButton></Link>
+            <Link to="/explore"><KButton block variant="gold" style={{ marginTop: 14 }}>{t('cta.explore_products')}</KButton></Link>
           </KCard>
         </div>
       </section>
 
       <footer className="container" style={{ padding: '30px 20px 60px', textAlign: 'center' }}>
         <hr className="k-divider" />
-        <p className="muted small">
-          KARVANTANA — From Craft to Commerce. AI and integrations run in clearly-labeled demo mode until real
-          credentials are configured. No metric on this platform is invented.
-        </p>
+        <p className="muted small">{t('landing.footer')}</p>
       </footer>
     </div>
   )

@@ -1,17 +1,18 @@
 /** Artisan order fulfilment — simple human labels, one legal next step at a time. */
 
 import { useEffect, useState } from 'react'
-import { api } from '../../core/api'
+import { api, serverUrl } from '../../core/api'
 import { inr, type OrderView } from '../../core/types'
 import { KBadge, KButton, KCard, KEmpty } from '../../design'
+import { useStatusLabel, useT } from '../../i18n'
 
-const NEXT_STEPS: Record<string, { to: string; label: string }[]> = {
-  CONFIRMED: [{ to: 'IN_PRODUCTION', label: 'Start crafting' }, { to: 'PROCESSING', label: 'Preparing' }],
-  PROCESSING: [{ to: 'IN_PRODUCTION', label: 'Craft it' }, { to: 'READY_TO_SHIP', label: 'Ready to ship' }],
-  IN_PRODUCTION: [{ to: 'READY_TO_SHIP', label: 'Mark ready to ship' }],
-  READY_TO_SHIP: [{ to: 'SHIPPED', label: 'Mark shipped' }],
-  SHIPPED: [{ to: 'DELIVERED', label: 'Mark delivered' }],
-  DELIVERED: [{ to: 'COMPLETED', label: 'Complete order' }],
+const NEXT_STEPS: Record<string, { to: string; keys: [string, string][] }[]> = {
+  CONFIRMED: [{ to: 'IN_PRODUCTION', keys: [['order.start_crafting', 'Start crafting']] }, { to: 'PROCESSING', keys: [['order.preparing', 'Preparing']] }],
+  PROCESSING: [{ to: 'IN_PRODUCTION', keys: [['order.craft_it', 'Craft it']] }, { to: 'READY_TO_SHIP', keys: [['order.next.ready', 'Mark ready to ship']] }],
+  IN_PRODUCTION: [{ to: 'READY_TO_SHIP', keys: [['order.next.ready', 'Mark ready to ship']] }],
+  READY_TO_SHIP: [{ to: 'SHIPPED', keys: [['order.next.ship', 'Mark shipped']] }],
+  SHIPPED: [{ to: 'DELIVERED', keys: [['order.next.deliver', 'Mark delivered']] }],
+  DELIVERED: [{ to: 'COMPLETED', keys: [['order.complete', 'Complete order']] }],
 }
 
 interface BulkOpportunity {
@@ -22,6 +23,8 @@ interface BulkOpportunity {
 }
 
 export default function ArtisanOrders() {
+  const { t } = useT()
+  const statusLabel = useStatusLabel()
   const [orders, setOrders] = useState<OrderView[] | null>(null)
   const [openBulk, setOpenBulk] = useState<BulkOpportunity[]>([])
   const [error, setError] = useState('')
@@ -34,7 +37,7 @@ export default function ArtisanOrders() {
     setOrders(o.items)
     setOpenBulk(b.items)
   }
-  useEffect(() => { void load().catch((e) => setError(e instanceof Error ? e.message : 'Load failed')) }, [])
+  useEffect(() => { void load().catch((e) => setError(e instanceof Error ? e.message : t('err.generic'))) }, [t])
 
   async function move(order: OrderView, to: string) {
     setError('')
@@ -42,23 +45,23 @@ export default function ArtisanOrders() {
       await api.post(`/orders/${order.id}/status`, { status: to })
       await load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not update the order.')
+      setError(e instanceof Error ? e.message : t('orders.update_failed'))
     }
   }
 
   return (
     <div className="k-stack">
-      <h2 style={{ fontSize: 22 }}>📦 Orders</h2>
+      <h2 style={{ fontSize: 22 }}>📦 {t('nav.orders')}</h2>
       {error && <div className="k-error">{error}</div>}
 
       {openBulk.length > 0 && (
         <KCard>
-          <div className="k-spread"><h3>🔥 Bulk opportunities</h3><KBadge tone="gold">B2B</KBadge></div>
-          <p className="muted small">Open requirements from business buyers — quote from your products page.</p>
+          <div className="k-spread"><h3>🔥 {t('bulk.opportunities', undefined, 'Bulk opportunities')}</h3><KBadge tone="gold">B2B</KBadge></div>
+          <p className="muted small">{t('bulk.opportunities_hint', undefined, 'Open requirements from business buyers — quote from your products page.')}</p>
           {openBulk.map((b) => (
             <div key={b.id} className="k-spread" style={{ borderTop: '1px dashed var(--stroke)', paddingTop: 8, marginTop: 8 }}>
               <span>{b.title}</span>
-              <span className="muted small">{b.quantity} units {b.max_unit_price ? `· up to ${inr(b.max_unit_price)}/unit` : ''}</span>
+              <span className="muted small">{b.quantity} {t('b2b.quantity_lc')} {b.max_unit_price ? `· ${inr(b.max_unit_price)}` : ''}</span>
             </div>
           ))}
         </KCard>
@@ -66,7 +69,7 @@ export default function ArtisanOrders() {
 
       {!orders && <KCard><div className="k-skeleton" style={{ height: 140 }} /></KCard>}
       {orders && orders.length === 0 && (
-        <KCard><KEmpty icon="📦" title="No orders yet" hint="Publish products and buyers will find you." /></KCard>
+        <KCard><KEmpty icon="📦" title={t('orders.none_yet', undefined, 'No orders yet')} hint={t('orders.artisan_none_hint', undefined, 'Publish products and buyers will find you.')} /></KCard>
       )}
 
       {orders && orders.map((o) => {
@@ -75,11 +78,11 @@ export default function ArtisanOrders() {
           <KCard key={o.id}>
             <div className="k-spread">
               <strong>{o.order_number}</strong>
-              <KBadge tone={o.status === 'COMPLETED' ? 'green' : o.status === 'CANCELLED' ? 'red' : 'blue'}>{o.status_label}</KBadge>
+              <KBadge tone={o.status === 'COMPLETED' ? 'green' : o.status === 'CANCELLED' ? 'red' : 'blue'}>{statusLabel(o.status, o.status_label)}</KBadge>
             </div>
             {o.items.map((i) => (
               <div key={i.id} className="k-row" style={{ marginTop: 8 }}>
-                {i.image_url && <img src={i.image_url} alt="" style={{ width: 52, height: 52, borderRadius: 10, objectFit: 'cover' }} />}
+                {i.image_url && <img src={serverUrl(i.image_url)} alt="" style={{ width: 52, height: 52, borderRadius: 10, objectFit: 'cover' }} />}
                 <div style={{ flex: 1 }}>
                   <div>{i.title}</div>
                   <div className="muted small">× {i.quantity} · {inr(i.line_total)}</div>
@@ -87,10 +90,10 @@ export default function ArtisanOrders() {
               </div>
             ))}
             <div className="k-spread" style={{ marginTop: 10 }}>
-              <span className="muted small">Buyer pays {inr(o.total)} (incl. platform fee {inr(o.platform_fee)})</span>
+              <span className="muted small">{t('order.buyer_pays', { total: inr(o.total), fee: inr(o.platform_fee) }, `Buyer pays ${inr(o.total)} (incl. platform fee ${inr(o.platform_fee)})`)}</span>
               <div className="k-row">
                 {steps.map((s) => (
-                  <KButton key={s.to} size="sm" onClick={() => void move(o, s.to)}>{s.label}</KButton>
+                  <KButton key={s.to} size="sm" onClick={() => void move(o, s.to)}>{s.keys.map(([k, fb]) => t(k, undefined, fb)).join(' / ')}</KButton>
                 ))}
               </div>
             </div>

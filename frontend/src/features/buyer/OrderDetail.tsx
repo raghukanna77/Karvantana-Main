@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../../core/api'
 import { inr, type OrderView } from '../../core/types'
 import { KBadge, KButton, KCard, KError, KSkeleton } from '../../design'
+import { useStatusLabel, useT } from '../../i18n'
 
 const FLOW = ['PENDING_PAYMENT', 'CONFIRMED', 'PROCESSING', 'IN_PRODUCTION', 'READY_TO_SHIP', 'SHIPPED', 'DELIVERED', 'COMPLETED']
 
@@ -14,11 +15,13 @@ export default function OrderDetailPage() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const navigate = useNavigate()
+  const { t } = useT()
+  const statusLabel = useStatusLabel()
 
   useEffect(() => {
     api.get<OrderView>(`/orders/${id}`)
       .then(setO)
-      .catch((e) => setError(e instanceof Error ? e.message : 'Order not found.'))
+      .catch((e) => setError(e instanceof Error ? e.message : t('co.order_not_found')))
   }, [id])
 
   async function reorder() {
@@ -28,7 +31,7 @@ export default function OrderDetailPage() {
       const next = await api.post<{ id: string; order_number: string }>(`/orders/${o.id}/reorder`)
       navigate(`/checkout/${next.id}`)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Reorder failed.')
+      setError(e instanceof Error ? e.message : t('orders.reorder_failed'))
     } finally { setBusy(false) }
   }
 
@@ -43,7 +46,7 @@ export default function OrderDetailPage() {
       <div className="k-stack">
         <div className="k-spread">
           <h2 style={{ fontSize: 22 }}>{o.order_number}</h2>
-          <KBadge tone={cancelled ? 'red' : stage >= FLOW.indexOf('DELIVERED') ? 'green' : 'blue'}>{o.status_label}</KBadge>
+          <KBadge tone={cancelled ? 'red' : stage >= FLOW.indexOf('DELIVERED') ? 'green' : 'blue'}>{statusLabel(o.status, o.status_label)}</KBadge>
         </div>
         {error && <KError message={error} />}
 
@@ -58,7 +61,7 @@ export default function OrderDetailPage() {
                     border: '1px solid ' + (i <= stage ? 'transparent' : 'var(--stroke)'),
                     color: i <= stage ? '#fff' : 'transparent', fontSize: 12, display: 'grid', placeItems: 'center',
                   }}>✓</div>
-                  <div className="muted" style={{ fontSize: 10, textTransform: 'capitalize' }}>{s.replace(/_/g, ' ').toLowerCase()}</div>
+                  <div className="muted" style={{ fontSize: 10 }}>{statusLabel(s)}</div>
                 </div>
               ))}
             </div>
@@ -72,18 +75,18 @@ export default function OrderDetailPage() {
             </div>
           ))}
           <hr className="k-divider" />
-          <div className="k-spread"><span className="muted small">Subtotal</span><span>{inr(o.subtotal)}</span></div>
-          <div className="k-spread"><span className="muted small">Platform fee</span><span>{inr(o.platform_fee)}</span></div>
-          <div className="k-spread"><strong>Total</strong><strong className="k-price">{inr(o.total)}</strong></div>
+          <div className="k-spread"><span className="muted small">{t('co.subtotal')}</span><span>{inr(o.subtotal)}</span></div>
+          <div className="k-spread"><span className="muted small">{t('co.platform_fee')}</span><span>{inr(o.platform_fee)}</span></div>
+          <div className="k-spread"><strong>{t('co.total')}</strong><strong className="k-price">{inr(o.total)}</strong></div>
         </KCard>
 
         {o.history && o.history.length > 0 && (
           <KCard>
-            <h3>Journey</h3>
+            <h3>{t('order.journey', undefined, 'Journey')}</h3>
             <div className="k-stack" style={{ marginTop: 8 }}>
               {o.history.map((h, i) => (
                 <div key={i} className="k-row" style={{ justifyContent: 'space-between' }}>
-                  <span className="small">{h.to.replace(/_/g, ' ').toLowerCase()}</span>
+                  <span className="small">{statusLabel(h.to)}</span>
                   <span className="muted small">
                     {new Date(h.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}
                   </span>
@@ -95,12 +98,12 @@ export default function OrderDetailPage() {
 
         <div className="k-row">
           {o.status === 'PENDING_PAYMENT' && (
-            <Link to={`/checkout/${o.id}`} className="k-btn">Complete payment</Link>
+            <Link to={`/checkout/${o.id}`} className="k-btn">{t('order.complete_payment', undefined, 'Complete payment')}</Link>
           )}
           {(o.status === 'DELIVERED' || o.status === 'COMPLETED') && (
-            <KButton variant="gold" onClick={reorder} disabled={busy}>🔁 Buy again</KButton>
+            <KButton variant="gold" onClick={reorder} disabled={busy}>🔁 {t('cta.buy_again')}</KButton>
           )}
-          <Link to="/buyer/orders" className="k-btn ghost">All orders</Link>
+          <Link to="/buyer/orders" className="k-btn ghost">{t('order.all_orders', undefined, 'All orders')}</Link>
         </div>
       </div>
     </div>

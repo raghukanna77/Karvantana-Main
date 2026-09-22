@@ -6,6 +6,15 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+# 20 official languages + 4 regional packs — must match frontend src/i18n LANGUAGES codes.
+SUPPORTED_LANGUAGES = (
+    "en", "hi", "bn", "mr", "te", "ta", "gu", "kn", "ml", "or",
+    "pa", "as", "ur", "ne", "kok", "ks", "mai", "sat", "mni", "brx",
+    "gar", "kfy", "gon", "bhb",
+)
+
+_LANG_PATTERN = "^(" + "|".join(SUPPORTED_LANGUAGES) + ")$"
+
 
 class OTPRequestIn(BaseModel):
     phone: str = Field(min_length=8, max_length=20, examples=["+91 98765 43210"])
@@ -27,6 +36,25 @@ class RegisterIn(BaseModel):
 class LoginIn(BaseModel):
     email: str
     password: str
+
+
+class LanguageIn(BaseModel):
+    """UI language preference. Validated against the 24-code registry (20 official + 4 regional)."""
+
+    preferred_language: str = Field(pattern=_LANG_PATTERN)
+
+
+class UserSettingsIn(BaseModel):
+    """Accessibility / voice / region preferences. All optional; only provided fields update."""
+
+    preferred_language: Optional[str] = Field(default=None, pattern=_LANG_PATTERN)
+    preferred_voice_language: Optional[str] = Field(default=None, pattern=_LANG_PATTERN)
+    voice_enabled: Optional[bool] = None
+    easy_mode_enabled: Optional[bool] = None
+    font_scale: Optional[float] = Field(default=None, ge=1.0, le=1.5)
+    region: Optional[str] = Field(default=None, max_length=80)
+    district: Optional[str] = Field(default=None, max_length=80)
+    state: Optional[str] = Field(default=None, max_length=80)
 
 
 class RefreshIn(BaseModel):

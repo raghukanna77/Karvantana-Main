@@ -4,30 +4,41 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api, ApiError } from '../../core/api'
-import {
-  inr, type CatalogueOutput, type PriceRec,
+import { api, ApiError, serverUrl } from '../../core/api'
+import { KNumberPad } from '../../design/voice'
+import { inr, type CatalogueOutput, type PriceRec,
 } from '../../core/types'
 import {
   KAIStages, KBadge, KButton, KCard, KConfidence, KError, KInput, KLabel, KSelect, KTextarea,
 } from '../../design'
+import { useT } from '../../i18n'
+import { useUi } from '../../state/stores'
 
 type Stage = { label: string; state: 'done' | 'active' | 'pending' }
 
-const SAMPLE_HINTS = [
-  'இது கைத்தறியில் நெய்த பருத்தி சேலை…',
-  'यह हाथ से बुना हुआ कपास की साड़ी है…',
-  'This is a handwoven cotton saree…',
-]
+const SAMPLE_HINTS: Record<string, string> = {
+  ta: 'இது கைத்தறியில் நெய்த பருத்தி சேலை…',
+  hi: 'यह हाथ से बुना हुआ कपास की साड़ी है…',
+  te: 'ఇది చేనేతలో నేసిన పట్టు చీర…',
+  kn: 'ಇದು ಕೈಮಗ್ಗದಲ್ಲಿ ನೇಯ್ದ ಹತ್ತಿ ಸೀರೆ…',
+  ml: 'ഇത് കൈത്തറയിൽ നെയ്ത പരുത്തി സാരി ആണ്…',
+  bn: 'এটি হাতে বোনা সুতির শাড়ি…',
+  mr: 'ही हातमागावर विणलेली सुती साडी आहे…',
+  gu: 'આ હાથથી વણેલી કપાસની સાડી છે…',
+  pa: 'ਇਹ ਹੱਥ ਨਾਲ ਬਣੀ ਸੂਤੀ ਸਾੜ੍ਹੀ ਹੈ…',
+  en: 'This is a handwoven cotton saree…',
+}
 
 export default function ProductWizard() {
   const navigate = useNavigate()
+  const { t } = useT()
+  const uiLang = useUi((s) => s.lang)
   const [step, setStep] = useState(1)
   const [productId, setProductId] = useState<string | null>(null)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [quality, setQuality] = useState<number | null>(null)
   const [transcript, setTranscript] = useState('')
-  const [language, setLanguage] = useState('ta')
+  const [language, setLanguage] = useState(() => useUi.getState().lang)
   const [catalogue, setCatalogue] = useState<CatalogueOutput | null>(null)
   const [extracted, setExtracted] = useState<Record<string, { value: string; confidence: number; source: string }>>({})
   const [rec, setRec] = useState<PriceRec | null>(null)
@@ -40,6 +51,8 @@ export default function ProductWizard() {
   const [regenField, setRegenField] = useState<string | null>(null)
   const recognitionRef = useRef<any>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  // verbatim AI output for the human-in-the-loop audit trail (never re-rendered)
+  const originalCatalogue = useRef<CatalogueOutput | null>(null)
 
   // draft restore
   useEffect(() => {
@@ -59,8 +72,8 @@ export default function ProductWizard() {
   async function handlePhoto(file: File) {
     setError(''); setBusy(true)
     setStages([
-      { label: 'Uploading photo', state: 'active' },
-      { label: 'Analyzing image quality', state: 'pending' },
+      { label: t('pw.stage_uploading'), state: 'active' },
+      { label: t('pw.stage_quality'), state: 'pending' },
     ])
     try {
       const created = await api.post<{ id: string }>('/products', { title: '', category: guessCategory() })
@@ -69,20 +82,20 @@ export default function ProductWizard() {
       setImageUrl(up.url)
       setQuality(up.quality_score)
       setStages([
-        { label: 'Uploading photo', state: 'done' },
-        { label: 'Analyzing image quality', state: 'done' },
+        { label: t('pw.stage_uploading'), state: 'done' },
+        { label: t('pw.stage_quality'), state: 'done' },
       ])
       persist({ productId: created.id, step: 2 })
       setStep(2)
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Upload failed.')
+      setError(e instanceof ApiError ? e.message : t('pw.upload_failed'))
     } finally { setBusy(false) }
   }
 
   function startSpeech() {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SR) {
-      setError('Your browser does not support speech input. Type below instead — everything else works the same.')
+      setError(t('pw.speech_unsupported'))
       return
     }
     const rec = new SR()
@@ -104,11 +117,11 @@ export default function ProductWizard() {
     if (!productId) return
     setError(''); setBusy(true)
     setStages([
-      { label: 'Understanding your description', state: 'active' },
-      { label: 'Translating', state: 'pending' },
-      { label: 'Extracting product details', state: 'pending' },
-      { label: 'Creating catalogue', state: 'pending' },
-      { label: 'Ready for your review', state: 'pending' },
+      { label: t('pw.stage_understanding'), state: 'active' },
+      { label: t('pw.stage_translating'), state: 'pending' },
+      { label: t('pw.stage_extracting'), state: 'pending' },
+      { label: t('pw.stage_creating'), state: 'pending' },
+      { label: t('pw.stage_review'), state: 'pending' },
     ])
     try {
       const voice = await api.post<{ language: string; translated: string; extracted: Record<string, { value: string; confidence: number; source: string }> }>(
@@ -118,13 +131,14 @@ export default function ProductWizard() {
       const cat = await api.post<CatalogueOutput>('/ai/catalogue/generate', {
         product_id: productId, transcript_en: voice.translated, transcript_original: transcript,
       })
+      originalCatalogue.current = { ...cat }  // keep AI verbatim for approval audit
       setCatalogue(cat)
       setPrice(String(Math.round(cat.confidence * 0 + 1250))) // placeholder replaced by pricing step
       setStages((s) => s.map((x, i) => (i < 4 ? { ...x, state: 'done' } : { ...x, state: 'active' })))
       persist({ step: 3 })
       setStep(3)
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'AI catalogue failed. You can still continue manually.')
+      setError(e instanceof ApiError ? e.message : t('pw.cat_failed'))
     } finally { setBusy(false) }
   }
 
@@ -137,8 +151,28 @@ export default function ProductWizard() {
       })
       setCatalogue({ ...catalogue, [field]: fresh[field] })
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Regeneration failed.')
+      setError(e instanceof ApiError ? e.message : t('pw.regen_failed'))
     } finally { setRegenField(null) }
+  }
+
+  /** Human-in-the-loop audit: record approve/edit per AI field (fire-and-forget;
+   *  must never block the artisan if the audit service is unavailable). */
+  function recordApprovals() {
+    if (!catalogue || !productId) return
+    const original = originalCatalogue.current
+    const fields: Array<['title' | 'short_description' | 'description' | 'keywords', unknown]> = [
+      ['title', catalogue.title], ['short_description', catalogue.short_description],
+      ['description', catalogue.description], ['keywords', catalogue.keywords],
+    ]
+    for (const [field, finalValue] of fields) {
+      const originalValue = original ? (original as unknown as Record<string, unknown>)[field] : undefined
+      const edited = JSON.stringify(finalValue) !== JSON.stringify(originalValue)
+      api.post('/sih/approvals', {
+        product_id: productId, ai_generation_id: catalogue.generation_id, field,
+        original_output: { value: originalValue }, final_output: { value: finalValue },
+        action: edited ? 'EDIT' : 'APPROVE', confidence: catalogue.confidence,
+      }).catch(() => { /* audit is best-effort from the artisan's perspective */ })
+    }
   }
 
   async function getPricing() {
@@ -157,7 +191,7 @@ export default function ProductWizard() {
       setRec(suggestion)
       setPrice(String(suggestion.suggested_price))
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Pricing assistant unavailable — set your price manually.')
+      setError(e instanceof ApiError ? e.message : t('pw.pricing_unavailable'))
     } finally { setBusy(false) }
   }
 
@@ -176,7 +210,7 @@ export default function ProductWizard() {
       localStorage.removeItem('karvantana.wizarddraft')
       navigate('/artisan/products')
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Publish failed.')
+      setError(e instanceof ApiError ? e.message : t('products.publish_failed'))
     } finally { setBusy(false) }
   }
 
@@ -185,21 +219,21 @@ export default function ProductWizard() {
   }
 
   const stageList: Stage[] = useMemo(() => [
-    { label: 'Photo captured', state: imageUrl ? 'done' : step >= 2 ? 'done' : 'active' },
-    { label: 'Description', state: transcript ? 'done' : step > 2 ? 'done' : step === 2 ? 'active' : 'pending' },
-    { label: 'AI catalogue approved', state: step > 3 ? 'done' : step === 3 ? 'active' : 'pending' },
-    { label: 'Price set', state: step > 4 ? 'done' : step === 4 ? 'active' : 'pending' },
-    { label: 'Published', state: step === 5 ? 'active' : 'pending' },
-  ], [imageUrl, transcript, step])
+    { label: t('pw.stage_photo'), state: imageUrl ? 'done' : step >= 2 ? 'done' : 'active' },
+    { label: t('pw.stage_description'), state: transcript ? 'done' : step > 2 ? 'done' : step === 2 ? 'active' : 'pending' },
+    { label: t('pw.stage_approved'), state: step > 3 ? 'done' : step === 3 ? 'active' : 'pending' },
+    { label: t('pw.stage_price'), state: step > 4 ? 'done' : step === 4 ? 'active' : 'pending' },
+    { label: t('pw.stage_published'), state: step === 5 ? 'active' : 'pending' },
+  ], [imageUrl, transcript, step, t])
 
   return (
     <div className="container" style={{ maxWidth: 760, padding: '22px 20px 90px' }}>
       <div className="k-spread" style={{ marginBottom: 12 }}>
         <div>
-          <h2 style={{ fontSize: 22 }}>📷 Add Product</h2>
-          <div className="muted small">Tap · Speak · Confirm · Publish</div>
+          <h2 style={{ fontSize: 22 }}>📷 {t('home.add_product')}</h2>
+          <div className="muted small">{t('pw.tagline')}</div>
         </div>
-        <KBadge tone="violet">Step {step} of 5</KBadge>
+        <KBadge tone="violet">{t('pw.step_of', { n: step })}</KBadge>
       </div>
 
       <KCard className="pad-lg" style={{ marginBottom: 14 }}>
@@ -222,12 +256,12 @@ export default function ProductWizard() {
                  onChange={(e) => { const f = e.target.files?.[0]; if (f) void handlePhoto(f) }} />
           <div className="k-stack">
             <KButton size="lg" block onClick={() => fileRef.current?.click()} disabled={busy}>
-              📷 {busy ? 'Working…' : 'Take / Choose Photo'}
+              📷 {busy ? t('pw.working') : t('pw.take_photo')}
             </KButton>
             {quality !== null && (
-              <div className="muted small">Image quality score: <strong>{quality}/100</strong> — computed from the photo itself.</div>
+              <div className="muted small">{t('pw.quality_score')}: <strong>{quality}/100</strong> — {t('pw.quality_note')}</div>
             )}
-            <p className="muted small">Your original photo is never modified — enhanced copies are saved separately.</p>
+            <p className="muted small">{t('pw.photo_safe')}</p>
           </div>
         </KCard>
       )}
@@ -235,27 +269,26 @@ export default function ProductWizard() {
       {/* STEP 2 — DESCRIBE */}
       {step === 2 && (
         <KCard className="pad-lg">
-          {imageUrl && <img src={imageUrl} alt="Product preview" style={{ borderRadius: 12, maxWidth: 220, marginBottom: 12 }} />}
-          <KLabel>Speak about your product</KLabel>
+          {imageUrl && <img src={serverUrl(imageUrl)} alt="Product preview" style={{ borderRadius: 12, maxWidth: 220, marginBottom: 12 }} />}
+          <KLabel>{t('pw.speak_about')}</KLabel>
           <div className="k-row" style={{ marginBottom: 10 }}>
-            <KSelect value={language} onChange={(e) => setLanguage(e.target.value)} style={{ maxWidth: 200 }}>
+            <KSelect value={language} onChange={(e) => setLanguage(e.target.value as import('../../i18n/languages').Lang)} style={{ maxWidth: 200 }} aria-label={t('ob.pick_language')}>
               {['ta', 'hi', 'te', 'kn', 'ml', 'bn', 'mr', 'gu', 'pa', 'en'].map((c) => (
                 <option key={c} value={c}>{c.toUpperCase()}</option>
               ))}
             </KSelect>
             <KButton variant={listening ? 'danger' : 'ghost'} onClick={startSpeech} disabled={busy}>
-              🎙️ {listening ? 'Listening…' : 'Speak'}
+              🎙️ {listening ? t('home.listening') : t('home.speak')}
             </KButton>
           </div>
           <KTextarea value={transcript} onChange={(e) => setTranscript(e.target.value)}
-                     placeholder={`Say anything, e.g. ${SAMPLE_HINTS[0]}`} rows={4} />
+                     placeholder={`${t('pw.say_anything')} ${SAMPLE_HINTS[uiLang] ?? SAMPLE_HINTS.en}`} rows={4} />
           <p className="muted small" style={{ marginTop: 8 }}>
-            Voice input uses your phone's speech engine; the server detects the language, translates and extracts details.
-            No internet? Your words are queued locally and used when you're back online.
+            {t('pw.voice_note')}
           </p>
           <div style={{ marginTop: 14 }}>
             <KButton block size="lg" disabled={!transcript.trim() || busy} onClick={generateCatalogue}>
-              ✨ Create with AI
+              ✨ {t('pw.create_ai')}
             </KButton>
           </div>
           {stages.length > 0 && (
@@ -271,7 +304,7 @@ export default function ProductWizard() {
         <div className="k-stack">
           <KCard className="pad-lg">
             <div className="k-spread">
-              <h3>✨ AI Understanding</h3>
+              <h3>✨ {t('pw.ai_understanding')}</h3>
               <KConfidence score={catalogue.confidence} />
             </div>
             <div className="k-stack" style={{ marginTop: 10 }}>
@@ -281,32 +314,32 @@ export default function ProductWizard() {
                   <span className="k-row" style={{ gap: 8 }}>
                     <strong style={{ textTransform: 'capitalize' }}>{String(v.value)}</strong>
                     <KBadge tone={v.confidence >= 0.75 ? 'green' : 'gold'}>
-                      {v.confidence >= 0.75 ? `${Math.round(v.confidence * 100)}%` : 'confirm'}
+                      {v.confidence >= 0.75 ? `${Math.round(v.confidence * 100)}%` : t('ai.please_confirm')}
                     </KBadge>
                     <span className="muted small">{v.source}</span>
                   </span>
                 </div>
               ))}
             </div>
-            <p className="muted small" style={{ marginTop: 8 }}>AI never invents facts — anything it couldn't hear clearly is marked “confirm”.</p>
+            <p className="muted small" style={{ marginTop: 8 }}>{t('pw.no_invention')}</p>
           </KCard>
 
           <KCard className="pad-lg">
             <div className="k-spread">
-              <h3>Review & approve</h3>
-              <span className="muted small">Edit anything · Regenerate one field</span>
+              <h3>{t('pw.review_approve')}</h3>
+              <span className="muted small">{t('pw.edit_regenerate')}</span>
             </div>
-            <KLabel>Title</KLabel>
+            <KLabel>{t('pw.title')}</KLabel>
             <KInput value={catalogue.title} onChange={(e) => setCatalogue({ ...catalogue, title: e.target.value })} />
-            <div style={{ marginTop: 4 }}><KButton size="sm" variant="ghost" onClick={() => void regenerateField('title')} disabled={regenField === 'title'}>↻ Regenerate title</KButton></div>
-            <KLabel>Short description</KLabel>
+            <div style={{ marginTop: 4 }}><KButton size="sm" variant="ghost" onClick={() => void regenerateField('title')} disabled={regenField === 'title'}>↻ {t('pw.regen_title')}</KButton></div>
+            <KLabel>{t('pw.short_desc')}</KLabel>
             <KTextarea rows={2} value={catalogue.short_description} onChange={(e) => setCatalogue({ ...catalogue, short_description: e.target.value })} />
-            <KLabel>Full description</KLabel>
+            <KLabel>{t('pw.full_desc')}</KLabel>
             <KTextarea rows={6} value={catalogue.description} onChange={(e) => setCatalogue({ ...catalogue, description: e.target.value })} />
-            <KLabel>Search keywords</KLabel>
+            <KLabel>{t('pw.keywords')}</KLabel>
             <KInput value={catalogue.keywords} onChange={(e) => setCatalogue({ ...catalogue, keywords: e.target.value })} />
             <div className="k-row" style={{ marginTop: 16 }}>
-              <KButton size="lg" onClick={() => { persist({ step: 4 }); setStep(4); void getPricing() }}>Approve → Price</KButton>
+              <KButton size="lg" onClick={() => { recordApprovals(); persist({ step: 4 }); setStep(4); void getPricing() }}>{t('pw.approve_price')}</KButton>
             </div>
           </KCard>
         </div>
@@ -315,33 +348,39 @@ export default function ProductWizard() {
       {/* STEP 4 — PRICING */}
       {step === 4 && (
         <KCard className="pad-lg">
-          <h3>💰 Smart Pricing</h3>
+          <h3>💰 {t('pw.smart_pricing')}</h3>
           {rec ? (
             <>
               <div className="k-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', margin: '14px 0' }}>
-                <div className="k-stat"><span className="v">{inr(rec.estimated_cost)}</span><span className="l">Your cost</span></div>
-                <div className="k-stat"><span className="v">{inr(rec.market_low)}–{inr(rec.market_high)}</span><span className="l">Market range</span></div>
-                <div className="k-stat"><span className="v" style={{ color: '#9fe8ca' }}>{inr(rec.suggested_price)}</span><span className="l">AI suggestion</span></div>
-                <div className="k-stat"><span className="v">{inr(rec.estimated_margin)}</span><span className="l">Est. margin</span></div>
-                <div className="k-stat"><span className="v">{rec.demand_signal}</span><span className="l">Demand</span></div>
+                <div className="k-stat"><span className="v">{inr(rec.estimated_cost)}</span><span className="l">{t('pw.your_cost')}</span></div>
+                <div className="k-stat"><span className="v">{inr(rec.market_low)}–{inr(rec.market_high)}</span><span className="l">{t('pw.market_range')}</span></div>
+                <div className="k-stat"><span className="v" style={{ color: '#0e6e4a' }}>{inr(rec.suggested_price)}</span><span className="l">{t('pw.ai_suggestion')}</span></div>
+                <div className="k-stat"><span className="v">{inr(rec.estimated_margin)}</span><span className="l">{t('pw.est_margin')}</span></div>
+                <div className="k-stat"><span className="v">{rec.demand_signal}</span><span className="l">{t('pw.demand')}</span></div>
               </div>
-              <button className="k-btn sm ghost" onClick={() => setShowWhy(!showWhy)}>Why this price?</button>
+              <button className="k-btn sm ghost" onClick={() => setShowWhy(!showWhy)}>{t('pw.why_price')}</button>
               {showWhy && <p className="muted small" style={{ marginTop: 8 }}>{rec.explanation}</p>}
               <div className="k-row" style={{ marginTop: 14 }}>
-                <KButton variant="ghost" onClick={() => setPrice(String(rec.suggested_price))}>Accept {inr(rec.suggested_price)}</KButton>
-                <span className="muted small">— or set your own below. Pricing is advice, never a rule.</span>
+                <KButton variant="ghost" onClick={() => setPrice(String(rec.suggested_price))}>{t('pw.accept')} {inr(rec.suggested_price)}</KButton>
+                <span className="muted small">— {t('pw.pricing_advice')}</span>
               </div>
             </>
           ) : (
             <p className="muted small" style={{ margin: '10px 0' }}>
-              The pricing assistant is thinking… or set your price yourself right now.
+              {t('pw.pricing_thinking')}
             </p>
           )}
-          <KLabel>Your price (₹)</KLabel>
-          <KInput value={price} onChange={(e) => setPrice(e.target.value)} inputMode="decimal" placeholder="1250" />
+          {/* Voice/visual-first price entry: large number pad + optional voice;
+              typing stays available as the advanced fallback. */}
+          <KNumberPad lang={(language as import('../../i18n/languages').Lang)} title={t('pw.your_price')} initial={Number(price) || undefined}
+                      onDone={(n) => setPrice(String(n))} />
+          <details style={{ marginTop: 10 }}>
+            <summary className="muted small" style={{ cursor: 'pointer' }}>{t('pw.type_instead')}</summary>
+            <KInput style={{ marginTop: 8 }} value={price} onChange={(e) => setPrice(e.target.value)} inputMode="decimal" placeholder="1250" />
+          </details>
           <div className="k-row" style={{ marginTop: 16 }}>
             <KButton size="lg" disabled={!Number(price)} onClick={() => { persist({ step: 5 }); setStep(5) }}>
-              Continue → Review
+              {t('pw.continue_review')}
             </KButton>
           </div>
         </KCard>
@@ -350,22 +389,22 @@ export default function ProductWizard() {
       {/* STEP 5 — PUBLISH */}
       {step === 5 && catalogue && (
         <KCard className="pad-lg">
-          <h3>🚀 Ready for the world</h3>
+          <h3>🚀 {t('pw.ready_world')}</h3>
           <div className="k-row" style={{ margin: '12px 0' }}>
-            {imageUrl && <img src={imageUrl} alt="Product" style={{ width: 130, borderRadius: 12 }} />}
+            {imageUrl && <img src={serverUrl(imageUrl)} alt="Product" style={{ width: 130, borderRadius: 12 }} />}
             <div>
               <div style={{ fontWeight: 700, fontSize: 17 }}>{catalogue.title}</div>
               <div className="muted small" style={{ maxWidth: 420 }}>{catalogue.short_description}</div>
               <div className="k-row" style={{ marginTop: 8 }}>
-                <KBadge tone="gold">Price {inr(Number(price))}</KBadge>
-                <KBadge tone="blue">Made to order</KBadge>
+                <KBadge tone="gold">{t('pp.qty') === 'Qty' ? `Price ${inr(Number(price))}` : `${t('co.total')} ${inr(Number(price))}`}</KBadge>
+                <KBadge tone="blue">{t('products.made_to_order')}</KBadge>
               </div>
             </div>
           </div>
-          <p className="muted small">You approve every word and every rupee — nothing is published automatically.</p>
+          <p className="muted small">{t('pw.you_approve')}</p>
           <div className="k-row" style={{ marginTop: 14 }}>
-            <KButton size="lg" disabled={busy} onClick={publish}>✅ Publish my product</KButton>
-            <KButton variant="ghost" onClick={() => setStep(4)}>Back</KButton>
+            <KButton size="lg" disabled={busy} onClick={publish}>✅ {t('pw.publish_product')}</KButton>
+            <KButton variant="ghost" onClick={() => setStep(4)}>{t('pw.back')}</KButton>
           </div>
         </KCard>
       )}

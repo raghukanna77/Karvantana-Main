@@ -1,0 +1,33 @@
+# --- Node / builds ---
+node_modules/
+dist/
+*.local
+
+# --- Capacitor / Android build outputs (regenerated; keep the android/ sources) ---
+frontend/android/.gradle/
+frontend/android/app/build/
+frontend/android/build/
+frontend/android/local.properties
+frontend/android/capacitor-cordova-android-plugins/
+*.apk
+*.aab
+
+# --- Python backend ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+backend/test-results.xml
+
+# --- Local data (dev database & uploaded media are machine-specific) ---
+backend/karvantana.db
+backend/media/
+
+# --- Editor / tooling ---
+.DS_Store
+.kilo/
+.idea/
+.vscode/
+*.log
+*.tsbuildinfo

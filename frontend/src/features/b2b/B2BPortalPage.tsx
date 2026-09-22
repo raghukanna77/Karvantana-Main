@@ -4,10 +4,10 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api } from '../../core/api'
+import { api, serverUrl } from '../../core/api'
 import { inr, type BulkRequestView, type QuoteView } from '../../core/types'
 import { KAIStages, KBadge, KButton, KCard, KEmpty, KError, KInput, KLabel, KSkeleton, KTextarea } from '../../design'
-import { useAuth } from '../../state/stores'
+import { useT } from '../../i18n'
 
 interface Match {
   product_id: string
@@ -22,7 +22,7 @@ interface Match {
 }
 
 export default function B2BPortalPage() {
-  const user = useAuth((s) => s.user)
+  const { t } = useT()
 
   const [description, setDescription] = useState('')
   const [quantity, setQuantity] = useState('50')
@@ -42,8 +42,8 @@ export default function B2BPortalPage() {
   const loadRequests = useCallback(() => {
     api.get<{ items: BulkRequestView[] }>('/bulk-requests/mine')
       .then((r) => setRequests(r.items))
-      .catch((e) => setError(e instanceof Error ? e.message : 'Could not load requests.'))
-  }, [])
+      .catch((e) => setError(e instanceof Error ? e.message : t('b2b.load_failed')))
+  }, [t])
 
   useEffect(() => { loadRequests() }, [loadRequests])
 
@@ -56,7 +56,7 @@ export default function B2BPortalPage() {
       const q = await api.get<{ items: QuoteView[] }>('/quotes/mine')
       setQuotes(q.items.filter((x) => x.request_id === id))
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load this request.')
+      setError(e instanceof Error ? e.message : t('b2b.load_one_failed'))
     } finally { setBusy(false) }
   }
 
@@ -78,7 +78,7 @@ export default function B2BPortalPage() {
       const q = await api.get<{ items: QuoteView[] }>('/quotes/mine')
       setQuotes(q.items.filter((x) => x.request_id === res.id))
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not process the requirement.')
+      setError(e instanceof Error ? e.message : t('b2b.parse_failed'))
     } finally { setParsing(false) }
   }
 
@@ -95,7 +95,7 @@ export default function B2BPortalPage() {
         setQuotes(q.items.filter((x) => x.request_id === activeId))
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not accept the quote.')
+      setError(e instanceof Error ? e.message : t('b2b.accept_failed'))
     } finally { setBusy(false) }
   }
 
@@ -106,42 +106,40 @@ export default function B2BPortalPage() {
       <div className="k-stack">
         <div className="k-spread">
           <div>
-            <h2 style={{ fontSize: 22 }}>Procurement workspace</h2>
-            <div className="muted small">
-              {user ? `Business account · ${user.full_name}` : 'Sign in to manage procurement'} — every order goes directly to the artisan collective.
-            </div>
+            <h2 style={{ fontSize: 22 }}>{t('b2b.title')}</h2>
+            <div className="muted small">{t('b2b.subtitle')}</div>
           </div>
-          <Link to="/explore" className="k-btn sm ghost">Browse catalogue</Link>
+          <Link to="/explore" className="k-btn sm ghost">{t('b2b.browse')}</Link>
         </div>
 
         {error && <KError message={error} />}
         {accepted && (
           <div className="k-ok" role="status">
-            ✓ Quote accepted — order {accepted.order_number} created.{' '}
-            <Link to={`/checkout/${accepted.order_id}`} style={{ textDecoration: 'underline' }}>Complete payment →</Link>
+            {t('b2b.quote_accepted')} {accepted.order_number}.{' '}
+            <Link to={`/checkout/${accepted.order_id}`} style={{ textDecoration: 'underline' }}>{t('order.complete_payment')} →</Link>
           </div>
         )}
 
         <KCard>
-          <h3>New procurement requirement</h3>
-          <KLabel>What do you need? (plain language — the AI structures it)</KLabel>
+          <h3>{t('b2b.new_req')}</h3>
+          <KLabel>{t('b2b.what_need')}</KLabel>
           <KTextarea value={description} onChange={(e) => setDescription(e.target.value)}
                      placeholder='e.g. "500 handmade corporate gift boxes, natural materials, under ₹400 each, delivery within 30 days, logo engraving preferred"' />
           <div className="k-row" style={{ marginTop: 10 }}>
-            <div style={{ width: 110 }}><KLabel>Quantity</KLabel>
+            <div style={{ width: 110 }}><KLabel>{t('b2b.quantity')}</KLabel>
               <KInput value={quantity} onChange={(e) => setQuantity(e.target.value)} inputMode="numeric" /></div>
-            <div style={{ width: 150 }}><KLabel>Max ₹ / unit</KLabel>
+            <div style={{ width: 150 }}><KLabel>{t('b2b.max_price')}</KLabel>
               <KInput value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} inputMode="decimal" placeholder="optional" /></div>
-            <div style={{ width: 170 }}><KLabel>Needed by</KLabel>
+            <div style={{ width: 170 }}><KLabel>{t('b2b.needed_by')}</KLabel>
               <KInput type="date" value={requiredBy} onChange={(e) => setRequiredBy(e.target.value)} /></div>
           </div>
           <label className="k-row small" style={{ marginTop: 10, cursor: 'pointer' }}>
             <input type="checkbox" checked={needsCustom} onChange={(e) => setNeedsCustom(e.target.checked)} />
-            Customization required (branding, sizes, packaging…)
+            {t('b2b.customization')}
           </label>
           <div style={{ marginTop: 14 }}>
             <KButton size="lg" onClick={submitRequirement} disabled={parsing || description.trim().length < 10}>
-              {parsing ? 'Parsing requirement…' : '✨ Parse & find artisans'}
+              {parsing ? t('b2b.parsing') : `✨ ${t('b2b.parse_find')}`}
             </KButton>
           </div>
           {parsing && (
@@ -163,7 +161,7 @@ export default function B2BPortalPage() {
             </div>
             {active.parsed && (
               <div className="k-row" style={{ margin: '8px 0 12px' }}>
-                <span className="muted small">AI understood:</span>
+                <span className="muted small">{t('b2b.ai_understood')}</span>
                 {Object.entries(active.parsed)
                   .filter(([k]) => k !== 'confidence')
                   .map(([k, v]) => <KBadge key={k} tone="violet">{k.replace(/_/g, ' ')}: {String(v)}</KBadge>)}
@@ -179,49 +177,49 @@ export default function B2BPortalPage() {
 
         {matches && matches.length > 0 && (
           <div className="k-stack">
-            <h3 style={{ margin: 0 }}>Matched products</h3>
+            <h3 style={{ margin: 0 }}>{t('b2b.matched')}</h3>
             {matches.map((m) => (
               <KCard key={m.product_id}>
                 <div className="k-spread">
                   <div className="k-row">
-                    {m.image_url && <img src={m.image_url} alt="" style={{ width: 64, height: 64, borderRadius: 12, objectFit: 'cover' }} />}
+                    {m.image_url && <img src={serverUrl(m.image_url)} alt="" style={{ width: 64, height: 64, borderRadius: 12, objectFit: 'cover' }} />}
                     <div>
                       <Link to={`/product/${m.product_id}`} style={{ fontWeight: 700 }}>{m.title}</Link>
                       <div className="muted small">
                         {inr(m.price)}{m.bulk_price ? ` · ${inr(m.bulk_price)}/unit at ${m.bulk_moq}+` : ''}
                       </div>
                       <div className="k-row" style={{ marginTop: 6 }}>
-                        <KBadge tone="blue">match {Math.round(m.score * 100)}%</KBadge>
+                        <KBadge tone="blue">{t('b2b.match')} {Math.round(m.score * 100)}%</KBadge>
                         {m.reasons.slice(0, 2).map((r) => <span key={r} className="muted small">✓ {r}</span>)}
                       </div>
                     </div>
                   </div>
-                  <Link to={`/artisan-u/${m.artisan_id}`} className="k-btn sm ghost">View artisan</Link>
+                  <Link to={`/artisan-u/${m.artisan_id}`} className="k-btn sm ghost">{t('b2b.view_artisan')}</Link>
                 </div>
               </KCard>
             ))}
           </div>
         )}
         {matches && matches.length === 0 && active && (
-          <KEmpty icon="🧭" title="No in-catalogue matches yet"
-                  hint="Your requirement is saved — artisans see it in their opportunity feed and will quote directly." />
+          <KEmpty icon="🧭" title={t('b2b.no_matches')}
+                  hint={t('b2b.no_matches_hint')} />
         )}
 
         {quotes && quotes.length > 0 && (
           <div className="k-stack">
-            <h3 style={{ margin: 0 }}>Quotes</h3>
+            <h3 style={{ margin: 0 }}>{t('b2b.quotes')}</h3>
             {quotes.map((q) => (
               <KCard key={q.id}>
                 <div className="k-spread">
                   <div>
                     <strong>{q.artisan}</strong>
                     <div className="muted small">
-                      {inr(q.unit_price)}/unit × {q.quantity} = <strong>{inr(q.total)}</strong> · {q.lead_time_days}-day lead
+                      {inr(q.unit_price)}/unit × {q.quantity} = <strong>{inr(q.total)}</strong> · {q.lead_time_days} {t('b2b.day_lead')}
                       {q.note ? ` · "${q.note}"` : ''}
                     </div>
                   </div>
                   {q.status === 'PENDING'
-                    ? <KButton onClick={() => void accept(q.id)} disabled={busy}>Accept quote</KButton>
+                    ? <KButton onClick={() => void accept(q.id)} disabled={busy}>{t('b2b.accept_quote')}</KButton>
                     : <KBadge tone={q.status === 'ACCEPTED' ? 'green' : 'gold'}>{q.status}</KBadge>}
                 </div>
               </KCard>
@@ -231,7 +229,7 @@ export default function B2BPortalPage() {
 
         {requests && requests.length > 0 && (
           <div className="k-stack">
-            <h3 style={{ margin: 0 }}>Your requirements</h3>
+            <h3 style={{ margin: 0 }}>{t('b2b.your_reqs')}</h3>
             {requests.map((r) => (
               <KCard key={r.id} className={r.id === activeId ? 'k-weave' : ''}>
                 <div className="k-spread">
@@ -241,7 +239,7 @@ export default function B2BPortalPage() {
                       {r.quantity} units · {new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                     </div>
                   </div>
-                  <KButton size="sm" variant="ghost" onClick={() => void openRequest(r.id)}>Open pipeline</KButton>
+                  <KButton size="sm" variant="ghost" onClick={() => void openRequest(r.id)}>{t('b2b.open_pipeline')}</KButton>
                 </div>
               </KCard>
             ))}
@@ -249,8 +247,8 @@ export default function B2BPortalPage() {
         )}
 
         {requests && requests.length === 0 && (
-          <KEmpty icon="📦" title="No procurement requirements yet"
-                  hint="Describe what your business needs above — KARVANTANA structures it and routes it to capable artisan clusters." />
+          <KEmpty icon="📦" title={t('b2b.none_yet')}
+                  hint={t('b2b.none_hint')} />
         )}
 
         <p className="muted small">

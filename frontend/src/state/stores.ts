@@ -109,15 +109,31 @@ export const useOffline = create<OfflineState>((set, get) => ({
 
 interface UiState {
   lang: Lang
+  easyMode: boolean
+  voiceGuidance: boolean
   setLang: (l: Lang) => void
+  setEasyMode: (on: boolean) => void
+  setVoiceGuidance: (on: boolean) => void
 }
 
 const LANG_KEY = 'karvantana.lang'
+const EASY_KEY = 'karvantana.easyMode'
+const VOICE_KEY = 'karvantana.voiceGuidance'
 
 export const useUi = create<UiState>((set) => ({
   lang: (localStorage.getItem(LANG_KEY) as Lang) || 'en',
+  easyMode: localStorage.getItem(EASY_KEY) === '1',
+  voiceGuidance: localStorage.getItem(VOICE_KEY) !== '0', // default ON — voice-first product
   setLang: (l) => {
     localStorage.setItem(LANG_KEY, l)
     set({ lang: l })
+  },
+  setEasyMode: (on) => {
+    localStorage.setItem(EASY_KEY, on ? '1' : '0')
+    set({ easyMode: on })
+  },
+  setVoiceGuidance: (on) => {
+    localStorage.setItem(VOICE_KEY, on ? '1' : '0')
+    set({ voiceGuidance: on })
   },
 }))

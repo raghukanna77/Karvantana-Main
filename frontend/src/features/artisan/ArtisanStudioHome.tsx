@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api } from '../../core/api'
+import { api, serverUrl } from '../../core/api'
 import { inr, type ArtisanInfo } from '../../core/types'
 import { KBadge, KButton, KCard, KEmpty, KError, KSkeleton, KVStat } from '../../design'
 
@@ -76,7 +76,7 @@ export default function ArtisanStudioPage() {
               {(a.products ?? []).map((p) => (
                 <Link key={p.id} to={`/product/${p.id}`} className="k-product-card k-card">
                   {p.image_url
-                    ? <img src={p.image_url} alt={p.title} loading="lazy" className="ph" />
+                    ? <img src={serverUrl(p.image_url)} alt={p.title} loading="lazy" className="ph" />
                     : <div style={{ aspectRatio: '1', background: 'var(--navy-700)' }} aria-hidden />}
                   <div className="body">
                     <div style={{ fontWeight: 700, fontSize: 14 }}>{p.title}</div>

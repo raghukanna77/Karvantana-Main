@@ -17,7 +17,7 @@ from app import __version__
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging, new_request_id
-from app.api.v1 import ai, analytics, artisans, auth, commerce, orders, payments, products
+from app.api.v1 import ai, analytics, artisans, auth, commerce, orders, payments, products, sih
 import app.models  # noqa: F401  register all models with Base.metadata
 
 settings = get_settings()
@@ -73,6 +73,7 @@ def create_app() -> FastAPI:
     app.include_router(payments.router, prefix=api_prefix)
     app.include_router(commerce.router, prefix=api_prefix)
     app.include_router(analytics.router, prefix=api_prefix)
+    app.include_router(sih.router, prefix=api_prefix)
 
     @app.get("/api/health", tags=["system"], summary="Health check")
     def health():

@@ -8,6 +8,7 @@ import { api } from '../../core/api'
 import { inr, type OrderView } from '../../core/types'
 import { KBadge, KButton, KCard, KError, KInput, KLabel, KSkeleton } from '../../design'
 import { useAuth } from '../../state/stores'
+import { useT } from '../../i18n'
 
 interface Intent {
   payment_id: string
@@ -34,12 +35,12 @@ export default function CheckoutPage() {
   const [saved, setSaved] = useState(false)
   const user = useAuth((s) => s.user)
   const navigate = useNavigate()
+  const { t } = useT()
 
   useEffect(() => {
     if (!user) { navigate('/login', { replace: true }); return }
     const savedAddr = localStorage.getItem('karvantana.address')
-    if (savedAddr) { try { setAddress(JSON.parse(savedAddr)) } catch { /* ignore */ } }
-    api.get<OrderView>(`/orders/${id}`).then(setOrder).catch((e) => setError(e instanceof Error ? e.message : 'Order not found.'))
+    if (savedAddr) { try { setAddress(JSON.parse(savedAddr)) } catch { /* ignore */ } }      api.get<OrderView>(`/orders/${id}`).then(setOrder).catch((e) => setError(e instanceof Error ? e.message : t('co.order_not_found')))
   }, [id, user, navigate])
 
   async function pay() {
@@ -57,7 +58,7 @@ export default function CheckoutPage() {
       setPaid(true)
       setOrder(await api.get<OrderView>(`/orders/${order.id}`))
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Payment failed. Please try again.')
+      setError(e instanceof Error ? e.message : t('co.pay_failed'))
     } finally { setBusy(false) }
   }
 
@@ -72,7 +73,7 @@ export default function CheckoutPage() {
         { order_item_id: item.id, product_rating: 5, text: review || undefined })
       setReviewDone(true)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Review could not be saved.')
+      setError(e instanceof Error ? e.message : t('co.review_failed'))
     } finally { setBusy(false) }
   }
 
@@ -83,7 +84,7 @@ export default function CheckoutPage() {
       const next = await api.post<{ id: string; order_number: string }>(`/orders/${order.id}/reorder`)
       setReordered(next.order_number)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Some items are no longer available to reorder.')
+      setError(e instanceof Error ? e.message : t('co.reorder_failed'))
     } finally { setBusy(false) }
   }
 
@@ -94,7 +95,7 @@ export default function CheckoutPage() {
       await api.post(`/artisans/${item.artisan_id}/save`)
       setSaved(true)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save the artisan.')
+      setError(e instanceof Error ? e.message : t('co.save_failed'))
     } finally { setBusy(false) }
   }
 
@@ -107,7 +108,7 @@ export default function CheckoutPage() {
     <div className="container" style={{ maxWidth: 640, padding: '24px 20px 80px' }}>
       <div className="k-stack">
         <div className="k-spread">
-          <h2 style={{ fontSize: 22 }}>Checkout</h2>
+          <h2 style={{ fontSize: 22 }}>{t('co.title')}</h2>
           <KBadge>{order.order_number}</KBadge>
         </div>
         {error && <KError message={error} />}
@@ -119,36 +120,33 @@ export default function CheckoutPage() {
             </div>
           ))}
           <hr className="k-divider" />
-          <div className="k-spread"><span className="muted small">Platform fee</span><span className="muted small">{inr(order.platform_fee)}</span></div>
-          <div className="k-spread"><strong>Total</strong><strong className="k-price">{inr(order.total)}</strong></div>
+          <div className="k-spread"><span className="muted small">{t('co.platform_fee')}</span><span className="muted small">{inr(order.platform_fee)}</span></div>
+          <div className="k-spread"><strong>{t('co.total')}</strong><strong className="k-price">{inr(order.total)}</strong></div>
         </KCard>
 
         {!paidAlready && (
           <>
             <KCard>
-              <h3>Delivery address</h3>
-              <KLabel>Address</KLabel>
-              <KInput value={address.line1} onChange={(e) => setAddress({ ...address, line1: e.target.value })} placeholder="House / street" />
+              <h3>{t('addr.title')}</h3>
+              <KLabel>{t('addr.line1')}</KLabel>
+              <KInput value={address.line1} onChange={(e) => setAddress({ ...address, line1: e.target.value })} placeholder={t('addr.line1_ph')} />
               <div className="k-row">
-                <div style={{ flex: 1 }}><KLabel>City</KLabel>
+                <div style={{ flex: 1 }}><KLabel>{t('addr.city')}</KLabel>
                   <KInput value={address.city} onChange={(e) => setAddress({ ...address, city: e.target.value })} /></div>
-                <div style={{ flex: 1 }}><KLabel>PIN code</KLabel>
+                <div style={{ flex: 1 }}><KLabel>{t('addr.pincode')}</KLabel>
                   <KInput value={address.pincode} onChange={(e) => setAddress({ ...address, pincode: e.target.value })} inputMode="numeric" /></div>
               </div>
             </KCard>
 
             <KCard>
               <div className="k-spread">
-                <h3>Payment</h3>
-                <KBadge tone="gold">Demo provider — sandbox</KBadge>
+                <h3>{t('co.payment')}</h3>
+                <KBadge tone="gold">{t('co.demo_provider')}</KBadge>
               </div>
-              <p className="muted small">
-                This deployment uses the clearly-labeled DemoPaymentProvider. Orders settle only after the
-                server verifies the gateway webhook — client "success" is never trusted.
-              </p>
-              {intent && <p className="muted small">Intent <code>{intent.provider_payment_id}</code> created with {intent.provider}.</p>}
+              <p className="muted small">{t('co.payment_note')}</p>
+              {intent && <p className="muted small">Intent <code>{intent.provider_payment_id}</code> · {intent.provider}</p>}
               <KButton block size="lg" onClick={pay} disabled={busy || !address.line1 || !address.pincode}>
-                {busy ? 'Verifying payment…' : `Pay ${inr(order.total)} (demo)`}
+                {busy ? t('co.verifying') : `${t('co.pay')} ${inr(order.total)} (demo)`}
               </KButton>
             </KCard>
           </>
@@ -156,37 +154,37 @@ export default function CheckoutPage() {
 
         {paidAlready && (
           <>
-            {paid && <div className="k-ok" role="status">✓ Payment verified — your order is confirmed. {item?.title && <>You're buying directly from the maker of {item.title}.</>}</div>}
+            {paid && <div className="k-ok" role="status">✓ {t('co.payment_verified')}</div>}
 
             <KCard className="pad-lg k-weave">
-              <h3>Build the relationship</h3>
-              <p className="muted small">Marketplaces connect you to products. KARVANTANA connects you back to the artisan.</p>
+              <h3>{t('co.relationship')}</h3>
+              <p className="muted small">{t('landing.notmarketplace_b')}</p>
               <div className="k-row" style={{ marginTop: 12 }}>
-                <KButton size="sm" variant="ghost" onClick={() => void reorder()} disabled={busy}>🔁 Buy again anytime</KButton>
+                <KButton size="sm" variant="ghost" onClick={() => void reorder()} disabled={busy}>🔁 {t('cta.buy_again')}</KButton>
                 <KButton size="sm" variant="ghost" onClick={saveArtisan} disabled={busy || saved}>
-                  {saved ? '✓ Artisan saved' : '➕ Save this artisan'}
+                  {saved ? `✓ ${t('co.artisan_saved')}` : `➕ ${t('co.save_artisan')}`}
                 </KButton>
-                <Link to="/buyer/orders" className="k-btn sm ghost">Track your orders</Link>
+                <Link to="/buyer/orders" className="k-btn sm ghost">{t('order.all_orders')}</Link>
               </div>
               {reordered && (
                 <div className="k-ok" style={{ marginTop: 10 }}>
-                  Reorder created: {reordered} — repeat business starts here.
+                  {t('co.reorder_created')}: {reordered}
                 </div>
               )}
             </KCard>
 
             {canReview && !reviewDone && (
               <KCard>
-                <h3>Rate your experience</h3>
-                <p className="muted small">Only verified purchases can be reviewed.</p>
-                <KInput value={review} onChange={(e) => setReview(e.target.value)} placeholder="Say something honest — it helps other buyers trust handmade." />
-                <div style={{ marginTop: 10 }}><KButton variant="ghost" onClick={submitReview} disabled={busy}>Submit 5★ review</KButton></div>
+                <h3>{t('co.rate_title')}</h3>
+                <p className="muted small">{t('co.rate_note')}</p>
+                <KInput value={review} onChange={(e) => setReview(e.target.value)} placeholder={t('co.rate_ph')} />
+                <div style={{ marginTop: 10 }}><KButton variant="ghost" onClick={submitReview} disabled={busy}>{t('co.submit_review')}</KButton></div>
               </KCard>
             )}
-            {canReview && reviewDone && <div className="k-ok">Thank you — your verified review builds artisan reputation.</div>}
+            {canReview && reviewDone && <div className="k-ok">{t('co.review_thanks')}</div>}
             {!canReview && (
               <p className="muted small">
-                Reviews unlock once the order is delivered. Track progress in <Link to="/buyer/orders">your orders</Link>.
+                {t('co.review_locked')} <Link to="/buyer/orders">{t('order.all_orders')}</Link>.
               </p>
             )}
           </>

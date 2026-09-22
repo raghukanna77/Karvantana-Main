@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../../core/api'
 import type { NotificationView } from '../../core/types'
 import { KBadge, KEmpty, KError, KSkeleton } from '../../design'
+import { useT } from '../../i18n'
 
 const ICONS: Record<string, string> = {
   ORDER_RECEIVED: '📦', PAYMENT_RECEIVED: '💳', QUOTE_RECEIVED: '🧾',
@@ -14,6 +15,7 @@ const ICONS: Record<string, string> = {
 }
 
 export default function NotificationsPage() {
+  const { t } = useT()
   const [items, setItems] = useState<NotificationView[] | null>(null)
   const [error, setError] = useState('')
 
@@ -36,11 +38,11 @@ export default function NotificationsPage() {
   return (
     <div className="container" style={{ padding: '24px 20px 80px', maxWidth: 680 }}>
       <div className="k-stack">
-        <h2 style={{ fontSize: 22 }}>Notifications</h2>
+        <h2 style={{ fontSize: 22 }}>{t('nav.notifications')}</h2>
         {error && <KError message={error} />}
         {items.length === 0 && (
-          <KEmpty icon="🔔" title="Nothing yet"
-            hint="Orders, quotes, reviews and AI updates will land here as your business moves." />
+          <KEmpty icon="🔔" title={t('notif.none_title')}
+            hint={t('notif.none_hint')} />
         )}
         {items.map((n) => {
           const inner = (
@@ -50,7 +52,7 @@ export default function NotificationsPage() {
                 <div>
                   <div className="k-row">
                     <strong style={{ fontSize: 14.5 }}>{n.title}</strong>
-                    {!n.is_read && <KBadge tone="blue">new</KBadge>}
+                    {!n.is_read && <KBadge tone="blue">{t('notif.new')}</KBadge>}
                   </div>
                   {n.body && <div className="muted small" style={{ marginTop: 2 }}>{n.body}</div>}
                   <div className="muted small" style={{ marginTop: 2, fontSize: 12 }}>
