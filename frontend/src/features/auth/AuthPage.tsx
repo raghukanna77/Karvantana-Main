@@ -32,7 +32,11 @@ export default function AuthPage() {
   const navigate = useNavigate()
   const { t } = useT()
 
-  function done(tokens: TokenPair) {
+  function done(tokens: TokenPair | null) {
+    if (!tokens || !tokens.user) {
+      setError('Invalid server response. Please check your backend URL and ensure the server is running.')
+      return
+    }
     setSession(tokens.user, tokens.access_token)
     navigate(homeFor(tokens.user.role), { replace: true })
   }

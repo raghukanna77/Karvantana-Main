@@ -40,4 +40,15 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Voice capture (Web Speech API in the WebView): the app prompts the
+         user at runtime when the artisan taps → Speak. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Let package visibility see the installed speech service so
+         SpeechRecognition resolves on Android 11+. -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
 </manifest>

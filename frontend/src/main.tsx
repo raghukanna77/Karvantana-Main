@@ -28,6 +28,7 @@ import ArtisanCustomers from './features/artisan/ArtisanCustomers'
 import ArtisanInsights from './features/artisan/ArtisanInsights'
 import ArtisanProfile from './features/artisan/ArtisanProfile'
 import AssistantPage from './features/assistant/AssistantPage'
+import WhatsAppSimulator from './features/whatsapp/WhatsAppSimulator'
 import CheckoutPage from './features/buyer/CheckoutPage'
 import BuyerOrders from './features/buyer/BuyerOrders'
 import SavedArtisansPage from './features/buyer/SavedArtisans'
@@ -168,6 +169,8 @@ createRoot(document.getElementById('root')!).render(
 
           <Route element={<RequireAuth roles={['ARTISAN', 'ADMIN']}><Outlet /></RequireAuth>}>
             <Route path="/assistant" element={<AssistantPage />} />
+            {/* WhatsApp fallback front-end — same listing pipeline, chat transport. */}
+            <Route path="/artisan/whatsapp" element={<WhatsAppSimulator />} />
           </Route>
 
           <Route element={<RequireAuth roles={['ADMIN']}><Outlet /></RequireAuth>}>

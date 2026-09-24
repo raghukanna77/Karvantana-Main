@@ -35,14 +35,18 @@ MATERIAL_LEXICON = {
     "wood": ("wood", "wooden", "மரம்", "लकड़ी"),
     "brass": ("brass", "பித்தளை", "पीतल"),
     "wool": ("wool", "கம்பளி", "ऊन"),
+    "screw pine": ("screw pine", "screw-pine", "screwpine", "தாழை"),
+    "acrylic": ("acrylic", "एक्रेलिक"),
 }
 
 TECHNIQUE_LEXICON = {
     "handloom": ("handloom", "handwoven", "கைத்தறி", "हैंडलूम", "हाथ से बुना", "చేతితో నేసిన", "ಕೈಯಿಂದ ನೇಯ್ದ", "হাতে বোনা", "हाताने विणलेले", "હાથથી વણેલું", "ਹੱਥ ਨਾਲ ਬੁਣਿਆ"),
-    "handwoven": ("handwoven", "woven by hand"),
+    "handwoven": ("handwoven", "woven by hand", "woven entirely by hand", "हाथ से बुनी", "बुनी हुई"),
     "handmade": ("handmade", "hand made", "கையால்", "हाथ से बना", "చేతిపని", "ಕೈ ಕೆಲಸ", "കൈകൊണ്ടുള്ള", "হাতে তৈরি", "हस्तनिर्मित", "હાથે બનાવેલું", "ਹੱਥ ਨਾਲ ਬਣਿਆ"),
     "natural dye": ("natural dye", "natural colour", "இயற்கை நிறம்", "प्राकृतिक रंग"),
     "hand-thrown": ("hand-thrown", "thrown on the wheel", "wheel"),
+    "hand-painted": ("hand-painted", "hand painted", "kalamkari"),
+    "machine-made": ("machine-made", "machine made"),
 }
 
 USAGE_LEXICON = {
@@ -53,9 +57,30 @@ USAGE_LEXICON = {
 }
 
 COLOUR_LEXICON = ("red", "blue", "green", "yellow", "black", "white", "brown", "natural", "maroon", "indigo",
+                  "teal", "pink", "orange", "purple", "golden", "grey", "gray",
                   "சிவப்பு", "நீலம்", "பச்சை", "இயற்கை நிறம்", "सफ़ेद", "काला")
 
-DAYS_PATTERN = re.compile(r"(\d+)\s*(?:day|நாள|दिन|நாட்கள்)", re.IGNORECASE)
+# Canonical display name per marker (English title-case); markers not listed
+# self-title ("indigo" → "Indigo"). Keeps non-English matches ("இயற்கை நிறம்",
+# "सफ़ेद") from being echoed raw into the product record.
+COLOUR_CANONICAL = {
+    "சிவப்பு": "Red", "நீலம்": "Blue", "பச்சை": "Green",
+    "இயற்கை நிறம்": "Natural", "सफ़ेद": "White", "काला": "Black",
+}
+
+# Production time: digits AND spoken word-numbers in en/ta/hi, plus units.
+# "week/வாரம்/सप्ताह" scale ×7. "a day"/"a week" handled by ARTICLE_DAYS.
+_DAY_WORDS = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+    "இரண்டு": 2, "மூன்று": 3, "நான்கு": 4, "நாலு": 4, "ஐந்து": 5, "ஆறு": 6, "ஏழு": 7, "எட்டு": 8, "ஒன்பது": 9, "பத்து": 10,
+    "एक": 1, "दो": 2, "तीन": 3, "चार": 4, "पाँच": 5, "पांच": 5, "छह": 6, "सात": 7, "आठ": 8, "नौ": 9, "दस": 10,
+}
+_WEEK_UNITS = ("week", "weeks", "வாரம்", "வாரங்கள்", "सप्ताह", "हफ़्ते", "हफ्ते")
+_DAYS_PATTERN = re.compile(
+    r"(\d{1,3}|" + "|".join(_DAY_WORDS) + r")\s*"
+    r"(day|days|week|weeks|நாள்|நாள|நாட்கள்|வாரம்|வாரங்கள்|दिन|दिनों|सप्ताह|हफ़्ते|हफ्ते)",
+    re.IGNORECASE)
+_ARTICLE_DAYS = re.compile(r"\ba\s+(day|week)\b", re.IGNORECASE)
 
 CATEGORY_RULES: dict[str, tuple[str, ...]] = {
     "saree": ("saree", "sari", "\u0b9a\u0bc7\u0bb2\u0bc8", "\u0938\u093e\u0921\u093c\u0940", "\u0c1a\u0c40\u0c30", "\u0c95\u0cc0\u0cb0\u0cc6", "\u0d38\u0d3e\u0d30\u0d3f", "\u09b6\u09be\u09dc\u09bf", "\u0ab8\u0abe\u0aa1\u0ac0", "\u0a38\u0a3e\u0a5c\u0a4d\u0a39\u0a40"),
@@ -64,38 +89,75 @@ CATEGORY_RULES: dict[str, tuple[str, ...]] = {
 }
 
 
-def extract_from_texts(transcript_original: str, transcript_en: str) -> dict:
-    """Pure extraction helper (no DB) shared by the pipeline and tests."""
-    t0 = time.monotonic()
-    fields: dict[str, conf.ConfidentValue] = {}
+def _parse_production_days(text: str) -> Optional[int]:
+    """First stated duration → days. Handles digits, word numbers (en/ta/hi),
+    weeks (×7) and the English article forms "a day" / "a week"."""
+    m = _DAYS_PATTERN.search(text)
+    if m:
+        token, unit = m.group(1), m.group(2).lower()
+        n = int(token) if token.isdigit() else _DAY_WORDS.get(token.lower())
+        if n is None:
+            return None
+        return 7 * n if unit in _WEEK_UNITS else n
+    a = _ARTICLE_DAYS.search(text)
+    if a:
+        return 7 if a.group(1).lower() == "week" else 1
+    return None
 
-    def find(lexicon: dict[str, tuple[str, ...]], text: str, base_conf: float):
-        lowered = text.lower()
-        best = None
+
+def extract_from_texts(transcript_original: str, transcript_en: str) -> dict:
+    """Pure extraction helper (no DB) shared by the pipeline, tests and eval."""
+    fields: dict[str, conf.ConfidentValue] = {}
+    combined = transcript_original + " " + transcript_en
+    lowered = combined.lower()
+
+    def find(lexicon: dict[str, tuple[str, ...]], text: str, base_conf: float) -> Optional[conf.ConfidentValue]:
+        low = text.lower()
+        best = None  # (score, -position); equal scores → the FIRST mention wins
         for value, markers in lexicon.items():
             for marker in markers:
-                if marker in lowered:
-                    score = base_conf + 0.05 * len(marker.split())
-                    if best is None or score > best.confidence:
-                        best = conf.ConfidentValue(value=value, confidence=min(score, 0.97), source=conf.SOURCE_VOICE)
-        return best
+                idx = low.find(marker.lower())
+                if idx == -1:
+                    continue
+                score = base_conf + 0.05 * len(marker.split())
+                key = (score, -idx)
+                if best is None or key > best[0]:
+                    best = (key, conf.ConfidentValue(value=value, confidence=min(score, 0.97), source=conf.SOURCE_VOICE))
+        return best[1] if best else None
 
-    material = find(MATERIAL_LEXICON, transcript_original + " " + transcript_en, 0.88)
+    material = find(MATERIAL_LEXICON, combined, 0.88)
     if material:
         fields["material"] = material
-    technique = find(TECHNIQUE_LEXICON, transcript_original + " " + transcript_en, 0.9)
+    technique = find(TECHNIQUE_LEXICON, combined, 0.9)
     if technique:
         fields["technique"] = technique
     usage = find(USAGE_LEXICON, transcript_en + " " + transcript_original, 0.8)
     if usage:
         fields["usage"] = usage
-    m = DAYS_PATTERN.search(transcript_original + " " + transcript_en)
-    if m:
-        fields["production_days"] = conf.ConfidentValue(int(m.group(1)), 0.9, conf.SOURCE_VOICE)
+    days = _parse_production_days(combined)
+    if days is not None:
+        fields["production_days"] = conf.ConfidentValue(days, 0.9, conf.SOURCE_VOICE)
+
+    # Colours: first NON-negated mention ("not red, not maroon" must not win),
+    # and "natural" only counts as a colour when it stands alone — "natural
+    # fibres" / "natural dye" describe material processing, not appearance.
+    _NATURAL_MODIFIERS = ("fibre", "fiber", "fibres", "fibers", "dye", "dyes")
     for colour in COLOUR_LEXICON:
-        if colour.lower() in (transcript_original + " " + transcript_en).lower():
-            fields["colour"] = conf.ConfidentValue(colour.title(), 0.85, conf.SOURCE_VOICE)
+        start = 0
+        while True:
+            i = lowered.find(colour.lower(), start)
+            if i == -1:
+                break
+            tail = lowered[i + len(colour):].lstrip()
+            modifier = colour.lower() == "natural" and any(tail.startswith(w) for w in _NATURAL_MODIFIERS)
+            if lowered[max(0, i - 4):i] != "not " and not modifier:
+                display = COLOUR_CANONICAL.get(colour.lower(), colour.title())
+                fields["colour"] = conf.ConfidentValue(display, 0.85, conf.SOURCE_VOICE)
+                break
+            start = i + 1
+        if "colour" in fields:
             break
+
     for cat, markers in CATEGORY_RULES.items():
         if any(mk in transcript_original.lower() for mk in markers):
             fields["category"] = conf.ConfidentValue(cat, 0.9, conf.SOURCE_AI_INFERENCE)
@@ -162,57 +224,19 @@ class AIPipeline:
     # ------------------------------------------------------------- extraction
 
     def extract_attributes(self, db: Session, *, transcript_en: str, transcript_original: str, user_id: Optional[str]) -> dict:
-        """Lexicon-based attribute extraction with confidence + provenance."""
+        """Lexicon-based attribute extraction with confidence + provenance.
+        Delegates the pure logic to extract_from_texts (single source of truth
+        shared with the evaluation harness); this wrapper only adds auditing."""
         t0 = time.monotonic()
-        fields: dict[str, conf.ConfidentValue] = {}
-
-        def find(lexicon: dict[str, tuple[str, ...]], text: str, base_conf: float) -> Optional[conf.ConfidentValue]:
-            lowered = text.lower()
-            best = None
-            for value, markers in lexicon.items():
-                for marker in markers:
-                    if marker in lowered:
-                        score = base_conf + 0.05 * len(marker.split())  # longer matches are surer
-                        if best is None or score > best.confidence:
-                            best = conf.ConfidentValue(value=value, confidence=min(score, 0.97), source=conf.SOURCE_VOICE)
-            return best
-
-        material = find(MATERIAL_LEXICON, transcript_original + " " + transcript_en, 0.88)
-        if material:
-            fields["material"] = material
-        technique = find(TECHNIQUE_LEXICON, transcript_original + " " + transcript_en, 0.9)
-        if technique:
-            fields["technique"] = technique
-        usage = find(USAGE_LEXICON, transcript_en + " " + transcript_original, 0.8)
-        if usage:
-            fields["usage"] = usage
-
-        m = DAYS_PATTERN.search(transcript_original + " " + transcript_en)
-        if m:
-            fields["production_days"] = conf.ConfidentValue(int(m.group(1)), 0.9, conf.SOURCE_VOICE)
-
-        for colour in COLOUR_LEXICON:
-            if colour.lower() in (transcript_original + " " + transcript_en).lower():
-                fields["colour"] = conf.ConfidentValue(colour.title(), 0.85, conf.SOURCE_VOICE)
-                break
-
-        category = None
-        for cat, markers in CATEGORY_RULES.items():
-            if any(mk in transcript_original.lower() for mk in markers):
-                category = conf.ConfidentValue(cat, 0.9, conf.SOURCE_AI_INFERENCE)
-                break
-        if category:
-            fields["category"] = category
-
-        # language of the artisan (from script) helps region inference
-        out = {k: v.to_dict() for k, v in fields.items()}
+        out = extract_from_texts(transcript_original, transcript_en)
+        confidences = [v["confidence"] for v in out.values()]
         self._record_usage(db, task="attribute_extraction", provider="demo-nlp", model="lexicon-v1",
                            latency_ms=int((time.monotonic() - t0) * 1000), success=True,
-                           confidence=conf.average_confidence(list(fields.values())))
+                           confidence=(sum(confidences) / len(confidences)) if confidences else None)
         self._audit(db, task="attribute_extraction", user_id=user_id, provider="demo-nlp",
                     model="lexicon-v1", prompt_key="attribute_extractor",
                     input_payload={"transcript_en": transcript_en[:500]}, output=out,
-                    confidence=conf.average_confidence(list(fields.values())))
+                    confidence=(sum(confidences) / len(confidences)) if confidences else None)
         return out
 
     # -------------------------------------------------------------- catalogue

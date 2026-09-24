@@ -1,30 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   KARVANTANA network security.
-  Cleartext HTTP is allowed ONLY for private LAN ranges and localhost so the
-  app can talk to a development backend on your computer (e.g.
-  http://192.168.1.20:8014). Public internet traffic stays HTTPS-only.
+
+  Android's network security config does NOT support IP ranges like
+  192.168.0.0/16 — a <domain> entry for "192.168.0.0" would only match that
+  literal IP. What actually works:
+
+    • Android 10+ : the <base-config> below applies to bare-IP origins too,
+      so http://192.168.x.x / http://10.x.x.x development backends work.
+    • Android 7–9 : some WebView versions do not treat IPs as domains, so
+      LAN cleartext can still be blocked on those older devices. Production
+      (HTTPS on a named domain) is unaffected everywhere — see
+      docs/CLOUD_DEPLOYMENT.md.
+
+  The public internet stays HTTPS-only: cleartext is enabled only in the
+  <base-config> as a pragmatic dev shim, and the app itself runs on
+  https://localhost (Capacitor androidScheme) with mixed content allowed
+  (capacitor.config.json → android.allowMixedContent) so it can reach a
+  plain-HTTP LAN backend.
 -->
 <network-security-config>
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">localhost</domain>
-        <domain includeSubdomains="false">10.0.0.0</domain>
-        <domain includeSubdomains="false">172.16.0.0</domain>
-        <domain includeSubdomains="false">172.17.0.0</domain>
-        <domain includeSubdomains="false">172.18.0.0</domain>
-        <domain includeSubdomains="false">172.19.0.0</domain>
-        <domain includeSubdomains="false">172.20.0.0</domain>
-        <domain includeSubdomains="false">172.21.0.0</domain>
-        <domain includeSubdomains="false">172.22.0.0</domain>
-        <domain includeSubdomains="false">172.23.0.0</domain>
-        <domain includeSubdomains="false">172.24.0.0</domain>
-        <domain includeSubdomains="false">172.25.0.0</domain>
-        <domain includeSubdomains="false">172.26.0.0</domain>
-        <domain includeSubdomains="false">172.27.0.0</domain>
-        <domain includeSubdomains="false">172.28.0.0</domain>
-        <domain includeSubdomains="false">172.29.0.0</domain>
-        <domain includeSubdomains="false">172.30.0.0</domain>
-        <domain includeSubdomains="false">172.31.0.0</domain>
-        <domain includeSubdomains="false">192.168.0.0</domain>
-    </domain-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <!-- System CAs only: user-installed CAs are NOT trusted, matching
+                 default production posture. Add a <debug-overrides> block
+                 locally if you need to intercept traffic with a proxy. -->
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
 </network-security-config>

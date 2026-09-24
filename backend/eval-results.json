@@ -1,0 +1,545 @@
+{
+  "extractor": "lexicon-v1 (demo AI pipeline)",
+  "corpus_version": "v1",
+  "task": "voice-transcript attribute extraction (material/technique/usage/colour/production_days/category)",
+  "languages": [
+    "ta",
+    "hi",
+    "en"
+  ],
+  "n_samples": 16,
+  "n_labeled_fields": 54,
+  "n_positive": 54,
+  "n_negative": 0,
+  "over_extracted_fields": 0,
+  "metrics": {
+    "roc_auc": null,
+    "pr_auc": 1.0,
+    "f1_score": 1.0,
+    "brier_score": 0.0097,
+    "accuracy": 1.0,
+    "accuracy_wilson_95": [
+      0.9336,
+      1.0
+    ],
+    "precision": 1.0,
+    "recall": 1.0,
+    "confusion": {
+      "tp": 54,
+      "fp": 0,
+      "fn": 0,
+      "tn": 0
+    },
+    "operating_threshold": 0.5
+  },
+  "per_field": {
+    "material": {
+      "labeled": 16,
+      "correct": 16,
+      "omitted": 0
+    },
+    "technique": {
+      "labeled": 9,
+      "correct": 9,
+      "omitted": 0
+    },
+    "colour": {
+      "labeled": 4,
+      "correct": 4,
+      "omitted": 0
+    },
+    "production_days": {
+      "labeled": 10,
+      "correct": 10,
+      "omitted": 0
+    },
+    "category": {
+      "labeled": 8,
+      "correct": 8,
+      "omitted": 0
+    },
+    "usage": {
+      "labeled": 7,
+      "correct": 7,
+      "omitted": 0
+    }
+  },
+  "per_sample": [
+    {
+      "sample_id": "eval-ta-001",
+      "language": "ta",
+      "fields": [
+        {
+          "field": "material",
+          "truth": "cotton",
+          "predicted": "cotton",
+          "confidence": 0.93,
+          "correct": true
+        },
+        {
+          "field": "technique",
+          "truth": "handloom / natural dye",
+          "predicted": "natural dye",
+          "confidence": 0.97,
+          "correct": true
+        },
+        {
+          "field": "colour",
+          "truth": "Natural",
+          "predicted": "Natural",
+          "confidence": 0.85,
+          "correct": true
+        },
+        {
+          "field": "production_days",
+          "truth": "4",
+          "predicted": 4,
+          "confidence": 0.9,
+          "correct": true
+        },
+        {
+          "field": "category",
+          "truth": "saree",
+          "predicted": "saree",
+          "confidence": 0.9,
+          "correct": true
+        }
+      ]
+    },
+    {
+      "sample_id": "eval-ta-002",
+      "language": "ta",
+      "fields": [
+        {
+          "field": "material",
+          "truth": "bamboo",
+          "predicted": "bamboo",
+          "confidence": 0.93,
+          "correct": true
+        },
+        {
+          "field": "technique",
+          "truth": "handmade",
+          "predicted": "handmade",
+          "confidence": 0.95,
+          "correct": true
+        },
+        {
+          "field": "usage",
+          "truth": "kitchen storage",
+          "predicted": "kitchen storage",
+          "confidence": 0.85,
+          "correct": true
+        },
+        {
+          "field": "category",
+          "truth": "basket",
+          "predicted": "basket",
+          "confidence": 0.9,
+          "correct": true
+        }
+      ]
+    },
+    {
+      "sample_id": "eval-hi-001",
+      "language": "hi",
+      "fields": [
+        {
+          "field": "material",
+          "truth": "bamboo",
+          "predicted": "bamboo",
+          "confidence": 0.93,
+          "correct": true
+        },
+        {
+          "field": "technique",
+          "truth": "handwoven",
+          "predicted": "handwoven",
+          "confidence": 0.97,
+          "correct": true
+        },
+        {
+          "field": "usage",
+          "truth": "kitchen storage",
+          "predicted": "kitchen storage",
+          "confidence": 0.85,
+          "correct": true
+        },
+        {
+          "field": "category",
+          "truth": "basket",
+          "predicted": "basket",
+          "confidence": 0.9,
+          "correct": true
+        }
+      ]
+    },
+    {
+      "sample_id": "eval-ta-003",
+      "language": "ta",
+      "fields": [
+        {
+          "field": "material",
+          "truth": "silk",
+          "predicted": "silk",
+          "confidence": 0.93,
+          "correct": true
+        },
+        {
+          "field": "category",
+          "truth": "saree",
+          "predicted": "saree",
+          "confidence": 0.9,
+          "correct": true
+        }
+      ]
+    },
+    {
+      "sample_id": "eval-en-001",
+      "language": "en",
+      "fields": [
+        {
+          "field": "material",
+          "truth": "cotton",
+          "predicted": "cotton",
+          "confidence": 0.93,
+          "correct": true
+        },
+        {
+          "field": "technique",
+          "truth": "handloom / natural dye",
+          "predicted": "natural dye",
+          "confidence": 0.97,
+          "correct": true
+        },
+        {
+          "field": "colour",
+          "truth": "Indigo / Blue",
+          "predicted": "Blue",
+          "confidence": 0.85,
+          "correct": true
+        },
+        {
+          "field": "production_days",
+          "truth": "6",
+          "predicted": 6,
+          "confidence": 0.9,
+          "correct": true
+        },
+        {
+          "field": "category",
+          "truth": "saree",
+          "predicted": "saree",
+          "confidence": 0.9,
+          "correct": true
+        }
+      ]
+    },
+    {
+      "sample_id": "eval-en-002",
+      "language": "en",
+      "fields": [
+        {
+          "field": "material",
+          "truth": "clay",
+          "predicted": "clay",
+          "confidence": 0.93,
+          "correct": true
+        },
+        {
+          "field": "technique",
+          "truth": "hand-thrown",
+          "predicted": "hand-thrown",
+          "confidence": 0.95,
+          "correct": true
+        },
+        {
+          "field": "usage",
+          "truth": "kitchen storage",
+          "predicted": "kitchen storage",
+          "confidence": 0.85,
+          "correct": true
+        },
+        {
+          "field": "colour",
+          "truth": "Natural",
+          "predicted": "Natural",
+          "confidence": 0.85,
+          "correct": true
+        },
+        {
+          "field": "production_days",
+          "truth": "3",
+          "predicted": 3,
+          "confidence": 0.9,
+          "correct": true
+        },
+        {
+          "field": "category",
+          "truth": "pottery",
+          "predicted": "pottery",
+          "confidence": 0.9,
+          "correct": true
+        }
+      ]
+    },
+    {
+      "sample_id": "eval-ta-004",
+      "language": "ta",
+      "fields": [
+        {
+          "field": "material",
+          "truth": "clay",
+          "predicted": "clay",
+          "confidence": 0.93,
+          "correct": true
+        },
+        {
+          "field": "usage",
+          "truth": "kitchen storage",
+          "predicted": "kitchen storage",
+          "confidence": 0.85,
+          "correct": true
+        },
+        {
+          "field": "production_days",
+          "truth": "2",
+          "predicted": 2,
+          "confidence": 0.9,
+          "correct": true
+        },
+        {
+          "field": "category",
+          "truth": "pottery",
+          "predicted": "pottery",
+          "confidence": 0.9,
+          "correct": true
+        }
+      ]
+    },
+    {
+      "sample_id": "eval-en-003",
+      "language": "en",
+      "fields": [
+        {
+          "field": "material",
+          "truth": "jute",
+          "predicted": "jute",
+          "confidence": 0.93,
+          "correct": true
+        },
+        {
+          "field": "usage",
+          "truth": "gifting",
+          "predicted": "gifting",
+          "confidence": 0.85,
+          "correct": true
+        }
+      ]
+    },
+    {
+      "sample_id": "eval-en-004",
+      "language": "en",
+      "fields": [
+        {
+          "field": "material",
+          "truth": "wool",
+          "predicted": "wool",
+          "confidence": 0.93,
+          "correct": true
+        },
+        {
+          "field": "technique",
+          "truth": "handloom",
+          "predicted": "handloom",
+          "confidence": 0.95,
+          "correct": true
+        },
+        {
+          "field": "production_days",
+          "truth": "5",
+          "predicted": 5,
+          "confidence": 0.9,
+          "correct": true
+        }
+      ]
+    },
+    {
+      "sample_id": "eval-hi-002",
+      "language": "hi",
+      "fields": [
+        {
+          "field": "material",
+          "truth": "brass",
+          "predicted": "brass",
+          "confidence": 0.93,
+          "correct": true
+        },
+        {
+          "field": "usage",
+          "truth": "home decor",
+          "predicted": "home decor",
+          "confidence": 0.85,
+          "correct": true
+        },
+        {
+          "field": "production_days",
+          "truth": "3",
+          "predicted": 3,
+          "confidence": 0.9,
+          "correct": true
+        },
+        {
+          "field": "category",
+          "truth": "pottery",
+          "predicted": "pottery",
+          "confidence": 0.9,
+          "correct": true
+        }
+      ]
+    },
+    {
+      "sample_id": "eval-ta-005",
+      "language": "ta",
+      "fields": [
+        {
+          "field": "material",
+          "truth": "wool",
+          "predicted": "wool",
+          "confidence": 0.93,
+          "correct": true
+        },
+        {
+          "field": "production_days",
+          "truth": "5",
+          "predicted": 5,
+          "confidence": 0.9,
+          "correct": true
+        }
+      ]
+    },
+    {
+      "sample_id": "eval-hi-003",
+      "language": "hi",
+      "fields": [
+        {
+          "field": "material",
+          "truth": "coir",
+          "predicted": "coir",
+          "confidence": 0.93,
+          "correct": true
+        },
+        {
+          "field": "production_days",
+          "truth": "2",
+          "predicted": 2,
+          "confidence": 0.9,
+          "correct": true
+        }
+      ]
+    },
+    {
+      "sample_id": "eval-en-005",
+      "language": "en",
+      "fields": [
+        {
+          "field": "material",
+          "truth": "cotton",
+          "predicted": "cotton",
+          "confidence": 0.93,
+          "correct": true
+        },
+        {
+          "field": "technique",
+          "truth": "hand-painted",
+          "predicted": "hand-painted",
+          "confidence": 0.95,
+          "correct": true
+        },
+        {
+          "field": "usage",
+          "truth": "home decor",
+          "predicted": "home decor",
+          "confidence": 0.85,
+          "correct": true
+        }
+      ]
+    },
+    {
+      "sample_id": "eval-en-006",
+      "language": "en",
+      "fields": [
+        {
+          "field": "material",
+          "truth": "screw pine",
+          "predicted": "screw pine",
+          "confidence": 0.93,
+          "correct": true
+        },
+        {
+          "field": "technique",
+          "truth": "handwoven",
+          "predicted": "handwoven",
+          "confidence": 0.97,
+          "correct": true
+        },
+        {
+          "field": "production_days",
+          "truth": "7",
+          "predicted": 7,
+          "confidence": 0.9,
+          "correct": true
+        }
+      ]
+    },
+    {
+      "sample_id": "eval-en-007",
+      "language": "en",
+      "fields": [
+        {
+          "field": "material",
+          "truth": "cotton",
+          "predicted": "cotton",
+          "confidence": 0.93,
+          "correct": true
+        },
+        {
+          "field": "colour",
+          "truth": "Teal",
+          "predicted": "Teal",
+          "confidence": 0.85,
+          "correct": true
+        }
+      ]
+    },
+    {
+      "sample_id": "eval-en-008",
+      "language": "en",
+      "fields": [
+        {
+          "field": "material",
+          "truth": "acrylic",
+          "predicted": "acrylic",
+          "confidence": 0.93,
+          "correct": true
+        },
+        {
+          "field": "technique",
+          "truth": "machine-made",
+          "predicted": "machine-made",
+          "confidence": 0.95,
+          "correct": true
+        },
+        {
+          "field": "production_days",
+          "truth": "1",
+          "predicted": 1,
+          "confidence": 0.9,
+          "correct": true
+        }
+      ]
+    }
+  ],
+  "method_note": "Each labeled field is one binary item: correct extraction = 1, wrong value or omission = 0. An unstated field the extractor invents counts as a false positive with score 0. The score used for ROC/PR/Brier is the extractor's own emitted confidence (0 when it abstains). Labels are fixed in app/ai/evaluation.py and auditable — no number on the dashboard is estimated.",
+  "generated_at": "2026-09-24T06:09:56.603004+00:00"
+}

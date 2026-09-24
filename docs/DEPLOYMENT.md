@@ -25,6 +25,10 @@ cd ../frontend && npm run dev   # http://localhost:5175, proxies /api → :8014
 macOS note: the machine's user-level Python has an x86_64 pydantic wheel —
 run under Rosetta (`arch -x86_64 /usr/bin/python3 …`) or install arm64 Python.
 
+For the minimal hands-on path (single VPS, HTTPS via Caddy, Android app pointed
+at the cloud server), see **[CLOUD_DEPLOYMENT.md](CLOUD_DEPLOYMENT.md)** with
+ready-made configs in `deploy/` (Caddyfile + systemd unit).
+
 ## Production path (blueprint §55, not yet exercised at scale)
 1. **Database:** PostgreSQL (`DATABASE_URL=postgresql+psycopg://…`). The ORM is
    dual-target; switch is configuration. Add Alembic before first prod migration.

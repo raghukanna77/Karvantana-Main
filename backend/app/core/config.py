@@ -57,7 +57,13 @@ class Settings(BaseSettings):
 
     @property
     def cors_origin_list(self) -> list[str]:
-        return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+        origins = [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+        if not self.is_production:
+            dev_origins = ["capacitor://localhost", "http://localhost", "https://localhost", "http://localhost:5173", "http://127.0.0.1:5173"]
+            for o in dev_origins:
+                if o not in origins:
+                    origins.append(o)
+        return origins
 
     @property
     def is_sqlite(self) -> bool:

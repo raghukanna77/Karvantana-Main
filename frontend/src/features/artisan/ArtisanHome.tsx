@@ -60,11 +60,12 @@ export default function ArtisanHome() {
 
   const tiles = [
     { icon: '📷', label: t('home.add_product'), to: '/artisan/products/new' },
+    { icon: '💬', label: 'Sell on WhatsApp', to: '/artisan/whatsapp' },
     { icon: '📦', label: t('home.orders'), to: '/artisan/orders' },
     { icon: '💰', label: t('home.earnings'), to: '/artisan/insights' },
     { icon: '❤️', label: t('home.customers'), to: '/artisan/customers' },
     { icon: '🔄', label: t('home.repeat'), to: '/artisan/customers' },
-    { icon: '💬', label: t('nav.my_studio'), to: '/assistant' },
+    { icon: '🤖', label: t('nav.my_studio'), to: '/assistant' },
   ]
 
   return (

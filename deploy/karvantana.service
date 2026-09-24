@@ -1,0 +1,24 @@
+# systemd unit for the KARVANTANA API.
+#
+# Install:
+#   cp deploy/karvantana.service /etc/systemd/system/
+#   systemctl daemon-reload && systemctl enable --now karvantana
+# Logs: journalctl -u karvantana -f
+#
+# Runs uvicorn on 127.0.0.1:8014 only; TLS is terminated by Caddy in front
+# (see deploy/Caddyfile). Set ENV=production and a strong JWT_SECRET in
+# backend/.env first — see docs/CLOUD_DEPLOYMENT.md.
+
+[Unit]
+Description=KARVANTANA API (uvicorn)
+After=network.target
+
+[Service]
+User=karva
+WorkingDirectory=/home/karva/karvantana/backend
+ExecStart=/home/karva/karvantana/backend/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8014
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

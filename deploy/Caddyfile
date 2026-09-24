@@ -1,0 +1,24 @@
+# Caddy reverse proxy for KARVANTANA — automatic HTTPS (Let's Encrypt).
+#
+# Install: copy to /etc/caddy/Caddyfile, replace api.example.com with your
+# domain, then `systemctl reload caddy`. Ports 80 + 443 must be reachable.
+#
+# Notes:
+#  • Caddy terminates TLS and proxies to uvicorn on 127.0.0.1:8014.
+#  • The payment webhook (/api/v1/payments/webhook) verifies an HMAC over the
+#    raw request body; Caddy streams the body through unmodified.
+#  • Optional: serve the web frontend from the same box by uncommenting the
+#    second site block (build the frontend with `npm run build`, copy `dist/`
+#    to /var/www/karvantana-app).
+
+api.example.com {
+	encode gzip
+	reverse_proxy 127.0.0.1:8014
+}
+
+# app.example.com {
+# 	root * /var/www/karvantana-app
+# 	encode gzip
+# 	try_files {path} /index.html
+# 	file_server
+# }

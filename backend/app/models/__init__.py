@@ -44,3 +44,4 @@ class SoftDeleteMixin:
 
 import app.models.sih  # noqa: E402,F401  SIH evidence models register with Base (must come after mixins)
 import app.models.settings  # noqa: E402,F401  user accessibility/voice/language preferences
+import app.models.whatsapp  # noqa: E402,F401  WhatsApp conversation sessions

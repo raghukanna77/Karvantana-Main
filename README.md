@@ -44,6 +44,11 @@ npm run android:open         # opens the project in Android Studio
 Then in Android Studio: **Build → Build Bundle(s)/APK(s) → Build APK(s)**
 (or run on a device/emulator with the green ▶ button).
 
+> Requires Android Studio with its bundled JDK 21 (Gradle 8.7 is configured via
+> the wrapper, so no extra Java setup). After **any** frontend change, re-run
+> `npm run android:sync` before rebuilding the APK — the web bundle inside
+> `android/app/src/main/assets/public` is not tracked in git.
+
 **Pointing the phone at your backend**
 The app talks to the KARVANTANA server over your network:
 1. Find your computer's LAN IP (`ipconfig` / `ifconfig`), e.g. `192.168.1.20`.
@@ -51,8 +56,17 @@ The app talks to the KARVANTANA server over your network:
 3. On the app's Login screen, set **Server address** to `http://192.168.1.20:8014` and Save.
    (The address is stored on the device; production deployments serve HTTPS and don't need it.)
 
+> Phone and computer must be on the same Wi-Fi network. LAN cleartext HTTP is
+> enabled app-wide for development (`android:allowMixedContent` + the network
+> security config's base config); production servers use HTTPS — see
+> [docs/CLOUD_DEPLOYMENT.md](docs/CLOUD_DEPLOYMENT.md).
+
 > The web build inside `android/app/src/main/assets/public` is refreshed by
 > `npm run android:sync` after any frontend change.
+
+**Outside the home network?** Run the backend on a cheap cloud VPS with HTTPS
+and point the app's Server address at it — see **[docs/CLOUD_DEPLOYMENT.md](docs/CLOUD_DEPLOYMENT.md)**.
+No app rebuild needed; the address is read at runtime.
 
 ### Demo credentials (seeded, fictional)
 
@@ -138,4 +152,8 @@ feature flags (`AI_ASSISTANT`, `B2B`, `ONDC`, …).
 - `docs/BLUEPRINT.md` — repository structure, ERD, API specification, RBAC model,
   AI architecture, offline sync, payment/notification/commerce-network architecture,
   deployment, security, testing strategy, milestones.
+- `docs/DEPLOYMENT.md` — environment variables and the production path
+  (PostgreSQL, S3 media, containers, migrations).
+- `docs/CLOUD_DEPLOYMENT.md` — hands-on guide: backend on a cheap cloud VPS
+  with HTTPS so the Android app works outside the home network.
 - API reference: FastAPI OpenAPI at `/docs` on the backend port.

@@ -17,7 +17,7 @@ from app import __version__
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging, new_request_id
-from app.api.v1 import ai, analytics, artisans, auth, commerce, orders, payments, products, sih
+from app.api.v1 import ai, analytics, artisans, auth, commerce, orders, payments, products, sih, whatsapp
 import app.models  # noqa: F401  register all models with Base.metadata
 
 settings = get_settings()
@@ -74,6 +74,7 @@ def create_app() -> FastAPI:
     app.include_router(commerce.router, prefix=api_prefix)
     app.include_router(analytics.router, prefix=api_prefix)
     app.include_router(sih.router, prefix=api_prefix)
+    app.include_router(whatsapp.router, prefix=api_prefix)
 
     @app.get("/api/health", tags=["system"], summary="Health check")
     def health():
@@ -85,12 +86,9 @@ def create_app() -> FastAPI:
                     "logistics": settings.LOGISTICS_PROVIDER,
                 }}
 
-    # Dev/test convenience: ensure tables exist. Production uses migrations
-    # (docs/DEPLOYMENT.md) — never rely on create_all against prod data.
-    if not settings.is_production:
-        from app.core.database import Base, engine
-
-        Base.metadata.create_all(bind=engine)
+    # Ensure database tables exist on startup (convenience for demo/cloud deploys like Render).
+    from app.core.database import Base, engine
+    Base.metadata.create_all(bind=engine)
 
     return app
 
