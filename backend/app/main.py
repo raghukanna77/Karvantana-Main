@@ -86,9 +86,25 @@ def create_app() -> FastAPI:
                     "logistics": settings.LOGISTICS_PROVIDER,
                 }}
 
-    # Ensure database tables exist on startup (convenience for demo/cloud deploys like Render).
-    from app.core.database import Base, engine
-    Base.metadata.create_all(bind=engine)
+    # Ensure database tables exist and seed demo data if empty on startup
+    from app.core.database import Base, engine, SessionLocal
+    from app.models.user import User
+    try:
+        Base.metadata.create_all(bind=engine)
+        db = SessionLocal()
+        if db.query(User).filter(User.is_demo.is_(True)).count() == 0:
+            import sys
+            parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            if parent_dir not in sys.path:
+                sys.path.append(parent_dir)
+            try:
+                import seed_demo
+                seed_demo.seed()
+            except Exception:
+                pass
+        db.close()
+    except Exception:
+        pass
 
     return app
 
